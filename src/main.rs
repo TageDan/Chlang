@@ -1,5 +1,6 @@
 mod board;
 
 fn main() {
-    println!("Hello, world!");
+    let board = board::Board::default();
+    println!("{}", board);
 }
