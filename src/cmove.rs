@@ -3,13 +3,13 @@ use std::str::FromStr;
 use crate::board::Position;
 use crate::piece::Piece;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Move {
-    piece: Piece,
-    from: Position,
-    to: Position,
-    capture: bool,
-    castle: CastleType,
+    pub piece: Piece,
+    pub from: Position,
+    pub to: Position,
+    pub capture: bool,
+    pub castle: CastleType,
 }
 
 impl FromStr for Move {
@@ -116,7 +116,7 @@ impl FromStr for Move {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum CastleType {
     None,
     Short,

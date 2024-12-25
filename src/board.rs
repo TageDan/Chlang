@@ -1,4 +1,4 @@
-use crate::piece::Piece;
+use crate::{cmove::Move, piece::Piece};
 use std::{fmt::Display, str::FromStr};
 
 /// Bitboard representation of a chess board
@@ -12,10 +12,15 @@ pub struct Board {
     pub black_piece_bitboard: u64,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Position {
     pub col: u32,
     pub row: u32,
+}
+impl Position {
+    pub fn bitboard(&self) -> u64 {
+        2_u64.pow(self.row * 8 + self.col)
+    }
 }
 
 #[derive(Debug)]
@@ -32,6 +37,29 @@ impl Player {
         }
     }
 }
+
+impl Board {
+    pub fn make_move(&mut self, cmove: Move) {
+        let to = cmove.to.bitboard();
+        let from = cmove.from.bitboard();
+        match self.turn {
+            Player::White => {
+                self.white_piece_bitboard = self.white_piece_bitboard & !from;
+                self.white_piece_bitboard = self.white_piece_bitboard | to;
+                self.turn = Player::Black;
+            }
+            Player::Black => {
+                self.black_piece_bitboard = self.black_piece_bitboard & !from;
+                self.black_piece_bitboard = self.black_piece_bitboard | to;
+                self.turn = Player::White;
+            }
+        }
+        let piece_bitboard = &mut self.piece_bitboards[cmove.piece.bitboard_index()];
+        *piece_bitboard = *piece_bitboard & !from;
+        *piece_bitboard = *piece_bitboard | to;
+    }
+}
+
 impl Default for Board {
     /// Return the initial position
     fn default() -> Self {

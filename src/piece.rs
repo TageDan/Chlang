@@ -1,6 +1,6 @@
 use crate::board::Player;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Piece {
     Pawn,
     Knight,
@@ -11,6 +11,17 @@ pub enum Piece {
 }
 
 impl Piece {
+    pub fn bitboard_index(&self) -> usize {
+        match self {
+            Self::Pawn => 0,
+            Self::Knight => 1,
+            Self::Bishop => 2,
+            Self::Rook => 3,
+            Self::Queen => 4,
+            Self::King => 5,
+        }
+    }
+
     pub fn index_display_char(index: usize, color: Player) -> char {
         match color {
             Player::White => match index {
