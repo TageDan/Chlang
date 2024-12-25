@@ -1,3 +1,4 @@
+use crate::piece::Piece;
 use std::{fmt::Display, str::FromStr};
 
 /// Bitboard representation of a chess board
@@ -11,26 +12,14 @@ pub struct Board {
     pub black_piece_bitboard: u64,
 }
 
-struct Position {
-    col: u32,
-    row: u32,
+#[derive(Debug)]
+pub struct Position {
+    pub col: u32,
+    pub row: u32,
 }
 
-struct Move {
-    piece: Piece,
-    from: Position,
-    to: Position,
-    capture: bool,
-    castle: CastleType,
-}
-
-enum CastleType {
-    None,
-    Short,
-    Long,
-}
-
-enum Player {
+#[derive(Debug)]
+pub enum Player {
     White,
     Black,
 }
@@ -43,41 +32,6 @@ impl Player {
         }
     }
 }
-
-enum Piece {
-    Pawn,
-    Knight,
-    Bishop,
-    Rook,
-    Queen,
-    King,
-}
-
-impl Piece {
-    fn index_display_char(index: usize, color: Player) -> char {
-        match color {
-            Player::White => match index {
-                0 => '♙',
-                1 => '♘',
-                2 => '♗',
-                3 => '♖',
-                4 => '♕',
-                5 => '♔',
-                _ => ' ',
-            },
-            Player::Black => match index {
-                0 => '♟',
-                1 => '♞',
-                2 => '♝',
-                3 => '♜',
-                4 => '♜',
-                5 => '♚',
-                _ => ' ',
-            },
-        }
-    }
-}
-
 impl Default for Board {
     /// Return the initial position
     fn default() -> Self {
