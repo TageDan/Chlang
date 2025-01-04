@@ -106,6 +106,7 @@ impl FromStr for Move {
             }
             Position { col, row }
         };
+
         Ok(Move {
             piece,
             from: starting_square,
@@ -117,7 +118,7 @@ impl FromStr for Move {
 }
 
 #[derive(Debug, Clone)]
-enum CastleType {
+pub enum CastleType {
     None,
     Short,
     Long,

@@ -10,6 +10,7 @@ pub struct Board {
     pub piece_bitboards: [u64; 6],
     pub white_piece_bitboard: u64,
     pub black_piece_bitboard: u64,
+    pub captured_pieces: Vec<(Piece, Player)>,
 }
 
 #[derive(Debug, Clone)]
@@ -39,6 +40,33 @@ impl Player {
 }
 
 impl Board {
+    pub fn piece_type(&self, pos: &Position) -> Option<(Player, Piece)> {
+        let color: Player = if self.white_piece_bitboard & pos.bitboard() != 0 {
+            Player::White
+        } else if self.black_piece_bitboard & pos.bitboard() != 0 {
+            Player::Black
+        } else {
+            return None;
+        };
+
+        for (p_bitboard, p) in (self.piece_bitboards).iter().zip(
+            [
+                Piece::Pawn,
+                Piece::Knight,
+                Piece::Bishop,
+                Piece::Rook,
+                Piece::Queen,
+                Piece::King,
+            ]
+            .into_iter(),
+        ) {
+            if p_bitboard & pos.bitboard() != 0 {
+                return Some((color, p));
+            }
+        }
+        None
+    }
+
     pub fn make_move(&mut self, cmove: Move) {
         let to = cmove.to.bitboard();
         let from = cmove.from.bitboard();
