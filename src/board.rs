@@ -127,6 +127,46 @@ impl Board {
         *piece_bitboard = *piece_bitboard | to;
         Ok(())
     }
+
+    fn get_pseudo_legal_moves_from(&self, pos: &Position) -> Vec<Move> {
+        let moves = match self.piece_type(pos) {
+            None => {
+                panic!("No piece on square");
+            }
+            Some((color, piece_type)) => match piece_type {
+                Piece::Pawn => self.get_pseudo_legal_pawn_moves_from(pos),
+                Piece::Knight => self.get_pseudo_legal_knight_moves_from(pos),
+                Piece::Bishop => self.get_pseudo_legal_bishop_moves_from(pos),
+                Piece::Rook => self.get_pseudo_legal_rook_moves_from(pos),
+                Piece::Queen => {
+                    todo!()
+                }
+                Piece::King => self.get_pseudo_legal_king_moves_from(pos),
+            },
+        };
+
+        moves
+    }
+
+    fn get_pseudo_legal_king_moves_from(&self, pos: &Position) -> Vec<Move> {
+        todo!()
+    }
+
+    fn get_pseudo_legal_rook_moves_from(&self, pos: &Position) -> Vec<Move> {
+        todo!()
+    }
+
+    fn get_pseudo_legal_bishop_moves_from(&self, pos: &Position) -> Vec<Move> {
+        todo!()
+    }
+
+    fn get_pseudo_legal_knight_moves_from(&self, pos: &Position) -> Vec<Move> {
+        todo!()
+    }
+
+    fn get_pseudo_legal_pawn_moves_from(&self, pos: &Position) -> Vec<Move> {
+        todo!()
+    }
 }
 
 impl Default for Board {
