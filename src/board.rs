@@ -78,21 +78,16 @@ impl Board {
     }
 
     pub fn make_move(&mut self, cmove: Move) -> Result<(), &str> {
-        let to = cmove.to.bitboard();
-        let from = cmove.from.bitboard();
-        if !self
-            .piece_type(&cmove.from)
-            .is_some_and(|x| x.0 == self.turn)
-        {
+        let to = cmove.to().bitboard();
+        let from = cmove.from();
+        if !self.piece_type(&from).is_some_and(|x| x.0 == self.turn) {
             return Err("Invalid move: Can only move from square occupied by yourself");
         }
+        let piece = self.piece_type(&from).ok_or("No piece")?;
+        let from = from.bitboard();
         match self.turn {
             Player::White => {
-                if cmove.capture {
-                    let captured_piece = self
-                        .piece_type(&cmove.to)
-                        .ok_or("Invalid move: Capture move captures nothing")?;
-
+                if let Some(captured_piece) = self.piece_type(&cmove.to()) {
                     if captured_piece.0 == Player::White {
                         return Err("Invalid move: Cannot capture your own piece");
                     }
@@ -104,18 +99,12 @@ impl Board {
                     self.black_piece_bitboard = self.black_piece_bitboard & !to;
                     self.captured_pieces.push(captured_piece);
                 }
-                if self.piece_type(&cmove.to).is_some() {
-                    return Err("Invalid move: Can not move onto occupied square");
-                };
                 self.white_piece_bitboard = self.white_piece_bitboard & !from;
                 self.white_piece_bitboard = self.white_piece_bitboard | to;
                 self.turn = Player::Black;
             }
             Player::Black => {
-                if cmove.capture {
-                    let captured_piece = self
-                        .piece_type(&cmove.to)
-                        .ok_or("Invalid move: Capture move captures nothing")?;
+                if let Some(captured_piece) = self.piece_type(&cmove.to()) {
                     if captured_piece.0 == Player::Black {
                         return Err("Invalid move: Cannot capture your own piece");
                     }
@@ -128,15 +117,12 @@ impl Board {
 
                     self.captured_pieces.push(captured_piece);
                 }
-                if self.piece_type(&cmove.to).is_some() {
-                    return Err("Invalid move: Can not move onto occupied square");
-                };
                 self.black_piece_bitboard = self.black_piece_bitboard & !from;
                 self.black_piece_bitboard = self.black_piece_bitboard | to;
                 self.turn = Player::White;
             }
         }
-        let piece_bitboard = &mut self.piece_bitboards[cmove.piece.bitboard_index()];
+        let piece_bitboard = &mut self.piece_bitboards[piece.1.bitboard_index()];
         *piece_bitboard = *piece_bitboard & !from;
         *piece_bitboard = *piece_bitboard | to;
         Ok(())

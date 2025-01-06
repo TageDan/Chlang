@@ -5,53 +5,16 @@ use crate::piece::Piece;
 
 #[derive(Debug, Clone)]
 pub struct Move {
-    pub piece: Piece,
-    pub from: Position,
-    pub to: Position,
-    pub capture: bool,
-    pub castle: CastleType,
+    bit_rep: u16,
 }
 
 impl FromStr for Move {
     type Err = &'static str;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s == "O-O" {
-            return Ok(Move {
-                piece: Piece::King,
-                from: Position { col: 0, row: 0 },
-                to: Position { col: 0, row: 0 },
-                capture: false,
-                castle: CastleType::Short,
-            });
-        }
-        if s == "O-O-O" {
-            return Ok(Move {
-                piece: Piece::King,
-                from: Position { col: 0, row: 0 },
-                to: Position { col: 0, row: 0 },
-                capture: false,
-                castle: CastleType::Long,
-            });
-        }
         let mut parts = s.chars().peekable();
         if parts.peek().is_none() {
             return Err("empty move string");
         }
-        let piece = if parts
-            .peek()
-            .is_some_and(|x| x.is_ascii_alphabetic() && x.is_uppercase())
-        {
-            match parts.next().ok_or("no piece")? {
-                'R' => Piece::Rook,
-                'B' => Piece::Bishop,
-                'N' => Piece::Knight,
-                'Q' => Piece::Queen,
-                'K' => Piece::King,
-                _ => return Err("invalid piece error"),
-            }
-        } else {
-            Piece::Pawn
-        };
         let starting_square = {
             let col = match parts.next().ok_or("no column")? {
                 'a' => 0,
@@ -68,19 +31,12 @@ impl FromStr for Move {
                 .next()
                 .ok_or("no row")?
                 .to_digit(10)
-                .ok_or("invalid row")?
+                .ok_or("invalid row")? as u16
                 - 1;
             if row >= 8 {
                 return Err("invalid row error");
             }
-            Position { col, row }
-        };
-
-        let capture = if *parts.peek().ok_or("no column")? == 'x' {
-            parts.next();
-            true
-        } else {
-            false
+            col + row * 8
         };
 
         let ending_square = {
@@ -99,21 +55,44 @@ impl FromStr for Move {
                 .next()
                 .ok_or("no row")?
                 .to_digit(10)
-                .ok_or("invalid row")?
+                .ok_or("invalid row")? as u16
                 - 1;
             if row >= 8 {
                 return Err("invalid row");
             }
-            Position { col, row }
+            col + row * 8
         };
 
+        // TODO: Promotion
+        // match parts.next().ok_or("no piece")? {
+        //     'R' => Piece::Rook,
+        //     'B' => Piece::Bishop,
+        //     'N' => Piece::Knight,
+        //     'Q' => Piece::Queen,
+        //     'K' => Piece::King,
+        //     _ => return Err("invalid piece error"),
+        // }
+
         Ok(Move {
-            piece,
-            from: starting_square,
-            to: ending_square,
-            capture,
-            castle: CastleType::None,
+            bit_rep: starting_square | ending_square << 6,
         })
+    }
+}
+
+impl Move {
+    pub fn from(&self) -> Position {
+        // extract starting square from bits
+        let from = (self.bit_rep & 0b111111) as u32;
+        let col = from % 8;
+        let row = from / 8;
+        Position { col, row }
+    }
+    pub fn to(&self) -> Position {
+        // extract end square from bits
+        let to = (self.bit_rep >> 6 & 0b111111) as u32;
+        let col = to % 8;
+        let row = to / 8;
+        Position { col, row }
     }
 }
 
