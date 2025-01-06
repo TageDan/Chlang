@@ -1,5 +1,5 @@
 use crate::{cmove::Move, piece::Piece};
-use std::{fmt::Display, str::FromStr};
+use std::{error::Error, fmt::Display, str::FromStr};
 
 /// Bitboard representation of a chess board
 pub struct Board {
@@ -10,7 +10,7 @@ pub struct Board {
     pub piece_bitboards: [u64; 6],
     pub white_piece_bitboard: u64,
     pub black_piece_bitboard: u64,
-    pub captured_pieces: Vec<(Piece, Player)>,
+    pub captured_pieces: Vec<(Player, Piece)>,
 }
 
 #[derive(Debug, Clone)]
@@ -24,7 +24,17 @@ impl Position {
     }
 }
 
-#[derive(Debug)]
+impl From<u64> for Position {
+    fn from(value: u64) -> Self {
+        let l = value.ilog2();
+        Self {
+            col: l % 8,
+            row: l / 8,
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
 pub enum Player {
     White,
     Black,
@@ -67,16 +77,60 @@ impl Board {
         None
     }
 
-    pub fn make_move(&mut self, cmove: Move) {
+    pub fn make_move(&mut self, cmove: Move) -> Result<(), &str> {
         let to = cmove.to.bitboard();
         let from = cmove.from.bitboard();
+        if !self
+            .piece_type(&cmove.from)
+            .is_some_and(|x| x.0 == self.turn)
+        {
+            return Err("Invalid move: Can only move from square occupied by yourself");
+        }
         match self.turn {
             Player::White => {
+                if cmove.capture {
+                    let captured_piece = self
+                        .piece_type(&cmove.to)
+                        .ok_or("Invalid move: Capture move captures nothing")?;
+
+                    if captured_piece.0 == Player::White {
+                        return Err("Invalid move: Cannot capture your own piece");
+                    }
+
+                    let cap_bitboard = &mut self.piece_bitboards[captured_piece.1.bitboard_index()];
+
+                    *cap_bitboard = *cap_bitboard & !to;
+
+                    self.black_piece_bitboard = self.black_piece_bitboard & !to;
+                    self.captured_pieces.push(captured_piece);
+                }
+                if self.piece_type(&cmove.to).is_some() {
+                    return Err("Invalid move: Can not move onto occupied square");
+                };
                 self.white_piece_bitboard = self.white_piece_bitboard & !from;
                 self.white_piece_bitboard = self.white_piece_bitboard | to;
                 self.turn = Player::Black;
             }
             Player::Black => {
+                if cmove.capture {
+                    let captured_piece = self
+                        .piece_type(&cmove.to)
+                        .ok_or("Invalid move: Capture move captures nothing")?;
+                    if captured_piece.0 == Player::Black {
+                        return Err("Invalid move: Cannot capture your own piece");
+                    }
+
+                    let cap_bitboard = &mut self.piece_bitboards[captured_piece.1.bitboard_index()];
+
+                    *cap_bitboard = *cap_bitboard & !to;
+
+                    self.white_piece_bitboard = self.white_piece_bitboard & !to;
+
+                    self.captured_pieces.push(captured_piece);
+                }
+                if self.piece_type(&cmove.to).is_some() {
+                    return Err("Invalid move: Can not move onto occupied square");
+                };
                 self.black_piece_bitboard = self.black_piece_bitboard & !from;
                 self.black_piece_bitboard = self.black_piece_bitboard | to;
                 self.turn = Player::White;
@@ -85,6 +139,7 @@ impl Board {
         let piece_bitboard = &mut self.piece_bitboards[cmove.piece.bitboard_index()];
         *piece_bitboard = *piece_bitboard & !from;
         *piece_bitboard = *piece_bitboard | to;
+        Ok(())
     }
 }
 
@@ -106,6 +161,7 @@ impl Default for Board {
             ],
             white_piece_bitboard: 0xffff,
             black_piece_bitboard: 0xffff000000000000,
+            captured_pieces: vec![],
         }
     }
 }
@@ -148,6 +204,7 @@ impl Display for Board {
             string.push_str(off);
             string.push('\n');
         }
+        string.push_str(&format!("turn {:?}", self.turn));
         write!(f, "{string}")
     }
 }

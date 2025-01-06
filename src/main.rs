@@ -17,7 +17,11 @@ fn main() {
         let cmove: Result<Move, &str> = input.parse();
 
         if cmove.is_ok() {
-            board.make_move(cmove.clone().unwrap());
+            let res = board.make_move(cmove.clone().unwrap());
+            if res.is_err() {
+                println!("error making move: {:?}", res);
+                let _ = stdin.read_line(&mut String::new());
+            }
         }
 
         println!("\x1b[2J\x1b[H");
