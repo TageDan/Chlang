@@ -12,7 +12,8 @@ pub struct Board {
     pub piece_bitboards: [u64; 6],
     pub white_piece_bitboard: u64,
     pub black_piece_bitboard: u64,
-    pub captured_pieces: Vec<(Player, Piece)>,
+    pub captured_pieces: Vec<Piece>,
+    pub made_moves: Vec<(Move, bool)>,
 }
 
 #[derive(Debug, Clone)]
@@ -89,6 +90,7 @@ impl Board {
         None
     }
 
+    // Make a move or return an error if move is not valid
     pub fn make_move(&mut self, cmove: Move) -> Result<(), &str> {
         let to = cmove.to().bitboard();
         let from = cmove.from();
@@ -101,6 +103,7 @@ impl Board {
             return Err("Not legal move");
         }
         let from = from.bitboard();
+        let mut capture = false;
         match self.turn {
             Player::White => {
                 if let Some(captured_piece) = self.piece_type(&cmove.to()) {
@@ -113,7 +116,8 @@ impl Board {
                     *cap_bitboard = *cap_bitboard & !to;
 
                     self.black_piece_bitboard = self.black_piece_bitboard & !to;
-                    self.captured_pieces.push(captured_piece);
+                    self.captured_pieces.push(captured_piece.1);
+                    capture = true;
                 }
                 self.white_piece_bitboard = self.white_piece_bitboard & !from;
                 self.white_piece_bitboard = self.white_piece_bitboard | to;
@@ -131,7 +135,7 @@ impl Board {
 
                     self.white_piece_bitboard = self.white_piece_bitboard & !to;
 
-                    self.captured_pieces.push(captured_piece);
+                    self.captured_pieces.push(captured_piece.1);
                 }
                 self.black_piece_bitboard = self.black_piece_bitboard & !from;
                 self.black_piece_bitboard = self.black_piece_bitboard | to;
@@ -139,9 +143,160 @@ impl Board {
             }
         }
         let piece_bitboard = &mut self.piece_bitboards[piece.1.bitboard_index()];
+        self.made_moves.push((cmove, capture));
         *piece_bitboard = *piece_bitboard & !from;
         *piece_bitboard = *piece_bitboard | to;
+        if !self.is_valid() {
+            self.unmake_last();
+            return Err("This leaves the king in check");
+        }
         Ok(())
+    }
+
+    /// Validate that king isn't in check on start of opponents turn
+    fn is_valid(&self) -> bool {
+        match self.turn {
+            Player::White => {
+                let king_pos = Position::from(
+                    self.piece_bitboards[Piece::King.bitboard_index()] & self.black_piece_bitboard,
+                );
+
+                for cmove in self.get_pseudo_legal_king_moves_from_pos(&king_pos, &Player::Black) {
+                    if self
+                        .piece_type(&cmove.to())
+                        .is_some_and(|x| x.0 == Player::White && x.1 == Piece::King)
+                    {
+                        // attacked by king
+                        return false;
+                    }
+                }
+                for cmove in [
+                    self.get_pseudo_legal_rook_moves_from_pos(&king_pos, &Player::Black),
+                    self.get_pseudo_legal_bishop_moves_from_pos(&king_pos, &Player::Black),
+                ]
+                .concat()
+                {
+                    if self
+                        .piece_type(&cmove.to())
+                        .is_some_and(|x| x.0 == Player::White && x.1 == Piece::Queen)
+                    {
+                        // attacked by queen
+                        return false;
+                    }
+                }
+                for cmove in self.get_pseudo_legal_bishop_moves_from_pos(&king_pos, &Player::Black)
+                {
+                    if self
+                        .piece_type(&cmove.to())
+                        .is_some_and(|x| x.0 == Player::White && x.1 == Piece::Bishop)
+                    {
+                        // attacked by bishop
+                        return false;
+                    }
+                }
+                for cmove in self.get_pseudo_legal_rook_moves_from_pos(&king_pos, &Player::Black) {
+                    if self
+                        .piece_type(&cmove.to())
+                        .is_some_and(|x| x.0 == Player::White && x.1 == Piece::Rook)
+                    {
+                        // attacked by Rook
+                        return false;
+                    }
+                }
+                for cmove in self.get_pseudo_legal_knight_moves_from_pos(&king_pos, &Player::Black)
+                {
+                    if self
+                        .piece_type(&cmove.to())
+                        .is_some_and(|x| x.0 == Player::White && x.1 == Piece::Knight)
+                    {
+                        // attacked by knight
+                        return false;
+                    }
+                }
+                for cmove in self.get_pseudo_legal_pawn_moves_from_pos(&king_pos, &Player::Black) {
+                    if cmove.to().col == king_pos.col {
+                        continue;
+                    }
+                    if self
+                        .piece_type(&cmove.to())
+                        .is_some_and(|x| x.0 == Player::White && x.1 == Piece::Pawn)
+                    {
+                        // attacked by pawn
+                        return false;
+                    }
+                }
+            }
+            Player::Black => {
+                let king_pos = Position::from(
+                    self.piece_bitboards[Piece::King.bitboard_index()] & self.white_piece_bitboard,
+                );
+                for cmove in self.get_pseudo_legal_king_moves_from_pos(&king_pos, &Player::White) {
+                    if self
+                        .piece_type(&cmove.to())
+                        .is_some_and(|x| x.0 == Player::Black && x.1 == Piece::King)
+                    {
+                        // attacked by king
+                        return false;
+                    }
+                }
+                for cmove in [
+                    self.get_pseudo_legal_rook_moves_from_pos(&king_pos, &Player::White),
+                    self.get_pseudo_legal_bishop_moves_from_pos(&king_pos, &Player::White),
+                ]
+                .concat()
+                {
+                    if self
+                        .piece_type(&cmove.to())
+                        .is_some_and(|x| x.0 == Player::Black && x.1 == Piece::Queen)
+                    {
+                        // attacked by queen
+                        return false;
+                    }
+                }
+                for cmove in self.get_pseudo_legal_bishop_moves_from_pos(&king_pos, &Player::White)
+                {
+                    if self
+                        .piece_type(&cmove.to())
+                        .is_some_and(|x| x.0 == Player::Black && x.1 == Piece::Bishop)
+                    {
+                        // attacked by bishop
+                        return false;
+                    }
+                }
+                for cmove in self.get_pseudo_legal_rook_moves_from_pos(&king_pos, &Player::White) {
+                    if self
+                        .piece_type(&cmove.to())
+                        .is_some_and(|x| x.0 == Player::Black && x.1 == Piece::Rook)
+                    {
+                        // attacked by Rook
+                        return false;
+                    }
+                }
+                for cmove in self.get_pseudo_legal_knight_moves_from_pos(&king_pos, &Player::White)
+                {
+                    if self
+                        .piece_type(&cmove.to())
+                        .is_some_and(|x| x.0 == Player::Black && x.1 == Piece::Knight)
+                    {
+                        // attacked by knight
+                        return false;
+                    }
+                }
+                for cmove in self.get_pseudo_legal_pawn_moves_from_pos(&king_pos, &Player::White) {
+                    if cmove.to().col == king_pos.col {
+                        continue;
+                    }
+                    if self
+                        .piece_type(&cmove.to())
+                        .is_some_and(|x| x.0 == Player::Black && x.1 == Piece::Pawn)
+                    {
+                        // attacked by pawn
+                        return false;
+                    }
+                }
+            }
+        }
+        true
     }
 
     fn get_pseudo_legal_moves_from_pos(&self, pos: &Position) -> Vec<Move> {
@@ -150,21 +305,23 @@ impl Board {
                 panic!("No piece on square");
             }
             Some((color, piece_type)) => match piece_type {
-                Piece::Pawn => self.get_pseudo_legal_pawn_moves_from_pos(pos),
-                Piece::Knight => self.get_pseudo_legal_knight_moves_from_pos(pos),
-                Piece::Bishop => self.get_pseudo_legal_bishop_moves_from_pos(pos),
-                Piece::Rook => self.get_pseudo_legal_rook_moves_from_pos(pos),
-                Piece::Queen => {
-                    vec![]
-                }
-                Piece::King => self.get_pseudo_legal_king_moves_from_pos(pos),
+                Piece::Pawn => self.get_pseudo_legal_pawn_moves_from_pos(pos, &color),
+                Piece::Knight => self.get_pseudo_legal_knight_moves_from_pos(pos, &color),
+                Piece::Bishop => self.get_pseudo_legal_bishop_moves_from_pos(pos, &color),
+                Piece::Rook => self.get_pseudo_legal_rook_moves_from_pos(pos, &color),
+                Piece::Queen => [
+                    self.get_pseudo_legal_rook_moves_from_pos(pos, &color),
+                    self.get_pseudo_legal_bishop_moves_from_pos(pos, &color),
+                ]
+                .concat(),
+                Piece::King => self.get_pseudo_legal_king_moves_from_pos(pos, &color),
             },
         };
 
         moves
     }
 
-    fn get_pseudo_legal_king_moves_from_pos(&self, pos: &Position) -> Vec<Move> {
+    fn get_pseudo_legal_king_moves_from_pos(&self, pos: &Position, color: &Player) -> Vec<Move> {
         let mut moves = Vec::with_capacity(8);
         for (r, c) in [
             (1, 0),
@@ -186,10 +343,10 @@ impl Board {
         moves
     }
 
-    fn get_pseudo_legal_rook_moves_from_pos(&self, pos: &Position) -> Vec<Move> {
+    fn get_pseudo_legal_rook_moves_from_pos(&self, pos: &Position, color: &Player) -> Vec<Move> {
         let mut moves = Vec::with_capacity(16);
         let all_bitboard = self.white_piece_bitboard | self.black_piece_bitboard;
-        let opponent_bitboard = match self.turn {
+        let opponent_bitboard = match color {
             Player::White => self.black_piece_bitboard,
             Player::Black => self.white_piece_bitboard,
         };
@@ -207,10 +364,27 @@ impl Board {
         moves
     }
 
-    fn get_pseudo_legal_bishop_moves_from_pos(&self, pos: &Position) -> Vec<Move> {
-        vec![]
+    fn get_pseudo_legal_bishop_moves_from_pos(&self, pos: &Position, color: &Player) -> Vec<Move> {
+        let mut moves = Vec::with_capacity(16);
+        let all_bitboard = self.white_piece_bitboard | self.black_piece_bitboard;
+        let opponent_bitboard = match color {
+            Player::White => self.black_piece_bitboard,
+            Player::Black => self.white_piece_bitboard,
+        };
+        for (r, c) in [(1, 1), (-1, 1), (1, -1), (-1, -1)].iter() {
+            let mut n_pos = Position::new(pos.row + r, pos.col + c);
+            while n_pos.valid() && n_pos.bitboard() & all_bitboard == 0 {
+                moves.push(Move::new(pos, &n_pos));
+                n_pos.col += c;
+                n_pos.row += r;
+            }
+            if n_pos.valid() && n_pos.bitboard() & opponent_bitboard != 0 {
+                moves.push(Move::new(pos, &n_pos));
+            }
+        }
+        moves
     }
-    fn get_pseudo_legal_knight_moves_from_pos(&self, pos: &Position) -> Vec<Move> {
+    fn get_pseudo_legal_knight_moves_from_pos(&self, pos: &Position, color: &Player) -> Vec<Move> {
         let mut moves = Vec::with_capacity(8);
         for (r, c) in [
             (2, 1),
@@ -232,8 +406,8 @@ impl Board {
         moves
     }
 
-    fn get_pseudo_legal_pawn_moves_from_pos(&self, pos: &Position) -> Vec<Move> {
-        match self.turn {
+    fn get_pseudo_legal_pawn_moves_from_pos(&self, pos: &Position, color: &Player) -> Vec<Move> {
+        match color {
             Player::White => {
                 let mut moves = Vec::with_capacity(4);
                 let one_forward = Position::new(pos.row + 1, pos.col);
@@ -283,6 +457,68 @@ impl Board {
             }
         }
     }
+
+    /// unmake the last move on the board
+    fn unmake_last(&mut self) {
+        match self.turn {
+            Player::White => {
+                self.turn = Player::Black;
+                let last_move = self
+                    .made_moves
+                    .pop()
+                    .expect("Failure: invalid board state in unmake_last function");
+
+                let cmove = last_move.0;
+                let piece_type = self
+                    .piece_type(&cmove.to())
+                    .expect("Failure: invalid board state in unmake_last function");
+
+                self.black_piece_bitboard = self.black_piece_bitboard | cmove.from().bitboard();
+                let piece_bitboard = &mut self.piece_bitboards[piece_type.1.bitboard_index()];
+                *piece_bitboard = *piece_bitboard | cmove.from().bitboard();
+                self.black_piece_bitboard = self.black_piece_bitboard & !cmove.to().bitboard();
+                *piece_bitboard = *piece_bitboard & !cmove.to().bitboard();
+
+                if last_move.1 {
+                    let last_capture = self
+                        .captured_pieces
+                        .pop()
+                        .expect("Failure: invalid board state in unmake_last function");
+                    self.white_piece_bitboard = self.white_piece_bitboard | cmove.to().bitboard();
+                    let piece_bitboard = &mut self.piece_bitboards[last_capture.bitboard_index()];
+                    *piece_bitboard = *piece_bitboard | cmove.to().bitboard();
+                }
+            }
+            Player::Black => {
+                self.turn = Player::White;
+                let last_move = self
+                    .made_moves
+                    .pop()
+                    .expect("Failure: invalid board state in unmake_last function");
+
+                let cmove = last_move.0;
+                let piece_type = self
+                    .piece_type(&cmove.to())
+                    .expect("Failure: invalid board state in unmake_last function");
+
+                self.white_piece_bitboard = self.white_piece_bitboard | cmove.from().bitboard();
+                let piece_bitboard = &mut self.piece_bitboards[piece_type.1.bitboard_index()];
+                *piece_bitboard = *piece_bitboard | cmove.from().bitboard();
+                self.white_piece_bitboard = self.white_piece_bitboard & !cmove.to().bitboard();
+                *piece_bitboard = *piece_bitboard & !cmove.to().bitboard();
+
+                if last_move.1 {
+                    let last_capture = self
+                        .captured_pieces
+                        .pop()
+                        .expect("Failure: invalid board state in unmake_last function");
+                    self.black_piece_bitboard = self.black_piece_bitboard | cmove.to().bitboard();
+                    let piece_bitboard = &mut self.piece_bitboards[last_capture.bitboard_index()];
+                    *piece_bitboard = *piece_bitboard | cmove.to().bitboard();
+                }
+            }
+        }
+    }
 }
 
 impl Default for Board {
@@ -304,6 +540,7 @@ impl Default for Board {
             white_piece_bitboard: 0xffff,
             black_piece_bitboard: 0xffff000000000000,
             captured_pieces: vec![],
+            made_moves: vec![],
         }
     }
 }
