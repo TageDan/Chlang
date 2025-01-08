@@ -3,7 +3,7 @@ use std::str::FromStr;
 use crate::board::Position;
 use crate::piece::Piece;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Move {
     bit_rep: u16,
 }

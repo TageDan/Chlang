@@ -94,6 +94,10 @@ impl Board {
             return Err("Invalid move: Can only move from square occupied by yourself");
         }
         let piece = self.piece_type(&from).ok_or("No piece")?;
+        let pseudo_legal_moves = self.get_pseudo_legal_moves_from(&from);
+        if !pseudo_legal_moves.contains(&cmove) {
+            return Err("Not legal move");
+        }
         let from = from.bitboard();
         match self.turn {
             Player::White => {
@@ -149,7 +153,7 @@ impl Board {
                 Piece::Bishop => self.get_pseudo_legal_bishop_moves_from(pos),
                 Piece::Rook => self.get_pseudo_legal_rook_moves_from(pos),
                 Piece::Queen => {
-                    todo!()
+                    vec![]
                 }
                 Piece::King => self.get_pseudo_legal_king_moves_from(pos),
             },
@@ -159,23 +163,71 @@ impl Board {
     }
 
     fn get_pseudo_legal_king_moves_from(&self, pos: &Position) -> Vec<Move> {
-        todo!()
+        vec![]
     }
 
     fn get_pseudo_legal_rook_moves_from(&self, pos: &Position) -> Vec<Move> {
-        todo!()
+        vec![]
     }
 
     fn get_pseudo_legal_bishop_moves_from(&self, pos: &Position) -> Vec<Move> {
-        todo!()
+        vec![]
     }
 
     fn get_pseudo_legal_knight_moves_from(&self, pos: &Position) -> Vec<Move> {
-        todo!()
+        vec![]
     }
 
     fn get_pseudo_legal_pawn_moves_from(&self, pos: &Position) -> Vec<Move> {
-        todo!()
+        match self.turn {
+            Player::White => {
+                let mut moves = Vec::with_capacity(4);
+                let one_forward = Position::new(pos.row + 1, pos.col);
+                let all_bitboard = self.white_piece_bitboard | self.black_piece_bitboard;
+                if one_forward.valid() && one_forward.bitboard() & (all_bitboard) == 0 {
+                    moves.push(Move::new(pos, &one_forward));
+                    if pos.row == 1 {
+                        let two_forward = Position::new(3, pos.col);
+                        if two_forward.bitboard() & (all_bitboard) == 0 {
+                            moves.push(Move::new(pos, &two_forward));
+                        }
+                    }
+                }
+                let take_right = Position::new(pos.row + 1, pos.col + 1);
+                if take_right.valid() && take_right.bitboard() & self.black_piece_bitboard != 0 {
+                    moves.push(Move::new(pos, &take_right));
+                }
+                let take_left = Position::new(pos.row + 1, pos.col - 1);
+                if take_left.valid() && take_left.bitboard() & self.black_piece_bitboard != 0 {
+                    moves.push(Move::new(pos, &take_left));
+                }
+                moves
+            }
+            Player::Black => {
+                let mut moves = Vec::with_capacity(4);
+                let one_forward = Position::new(pos.row - 1, pos.col);
+                let all_bitboard = self.white_piece_bitboard | self.black_piece_bitboard;
+                if one_forward.valid() && one_forward.bitboard() & (all_bitboard) == 0 {
+                    moves.push(Move::new(pos, &one_forward));
+                    if pos.row == 6 {
+                        let two_forward = Position::new(4, pos.col);
+                        if two_forward.bitboard() & (all_bitboard) == 0 {
+                            moves.push(Move::new(pos, &two_forward));
+                        }
+                    }
+                }
+                let take_right = Position::new(pos.row - 1, pos.col + 1);
+                if take_right.valid() && take_right.bitboard() & self.white_piece_bitboard != 0 {
+                    moves.push(Move::new(pos, &take_right));
+                }
+                let take_left = Position::new(pos.row - 1, pos.col - 1);
+                if take_left.valid() && take_left.bitboard() & (self.white_piece_bitboard) != 0 {
+                    moves.push(Move::new(pos, &take_left));
+                }
+
+                moves
+            }
+        }
     }
 }
 
