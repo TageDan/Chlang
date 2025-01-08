@@ -18,9 +18,13 @@ pub struct Position {
     pub col: u32,
     pub row: u32,
 }
+
 impl Position {
     pub fn bitboard(&self) -> u64 {
         2_u64.pow(self.row * 8 + self.col)
+    }
+    pub fn valid(&self) -> bool {
+        self.col < 8 && self.row < 8
     }
 }
 
