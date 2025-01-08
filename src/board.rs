@@ -6,7 +6,9 @@ pub struct Board {
     pub turn: Player,
     pub moves_since_capture: u8,
     pub can_castle_kingside: [bool; 2],
+    /// white, black
     pub can_castle_queenside: [bool; 2],
+    /// white, black
     pub piece_bitboards: [u64; 6],
     pub white_piece_bitboard: u64,
     pub black_piece_bitboard: u64,
@@ -163,7 +165,25 @@ impl Board {
     }
 
     fn get_pseudo_legal_king_moves_from(&self, pos: &Position) -> Vec<Move> {
-        vec![]
+        let mut moves = Vec::with_capacity(8);
+        for (r, c) in [
+            (1, 0),
+            (1, 1),
+            (0, 1),
+            (-1, 1),
+            (-1, 0),
+            (-1, -1),
+            (0, -1),
+            (1, -1),
+        ]
+        .iter()
+        {
+            let n_position = Position::new(pos.row + r, pos.col + c);
+            if n_position.valid() {
+                moves.push(Move::new(pos, &n_position));
+            }
+        }
+        moves
     }
 
     fn get_pseudo_legal_rook_moves_from(&self, pos: &Position) -> Vec<Move> {
@@ -173,9 +193,26 @@ impl Board {
     fn get_pseudo_legal_bishop_moves_from(&self, pos: &Position) -> Vec<Move> {
         vec![]
     }
-
     fn get_pseudo_legal_knight_moves_from(&self, pos: &Position) -> Vec<Move> {
-        vec![]
+        let mut moves = Vec::with_capacity(8);
+        for (r, c) in [
+            (2, 1),
+            (2, -1),
+            (-2, 1),
+            (-2, -1),
+            (1, 2),
+            (-1, 2),
+            (1, -2),
+            (-1, -2),
+        ]
+        .iter()
+        {
+            let n_position = Position::new(pos.row + r, pos.col + c);
+            if n_position.valid() {
+                moves.push(Move::new(pos, &n_position));
+            }
+        }
+        moves
     }
 
     fn get_pseudo_legal_pawn_moves_from(&self, pos: &Position) -> Vec<Move> {
