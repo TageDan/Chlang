@@ -96,7 +96,7 @@ impl Board {
             return Err("Invalid move: Can only move from square occupied by yourself");
         }
         let piece = self.piece_type(&from).ok_or("No piece")?;
-        let pseudo_legal_moves = self.get_pseudo_legal_moves_from(&from);
+        let pseudo_legal_moves = self.get_pseudo_legal_moves_from_pos(&from);
         if !pseudo_legal_moves.contains(&cmove) {
             return Err("Not legal move");
         }
@@ -144,27 +144,27 @@ impl Board {
         Ok(())
     }
 
-    fn get_pseudo_legal_moves_from(&self, pos: &Position) -> Vec<Move> {
+    fn get_pseudo_legal_moves_from_pos(&self, pos: &Position) -> Vec<Move> {
         let moves = match self.piece_type(pos) {
             None => {
                 panic!("No piece on square");
             }
             Some((color, piece_type)) => match piece_type {
-                Piece::Pawn => self.get_pseudo_legal_pawn_moves_from(pos),
-                Piece::Knight => self.get_pseudo_legal_knight_moves_from(pos),
-                Piece::Bishop => self.get_pseudo_legal_bishop_moves_from(pos),
-                Piece::Rook => self.get_pseudo_legal_rook_moves_from(pos),
+                Piece::Pawn => self.get_pseudo_legal_pawn_moves_from_pos(pos),
+                Piece::Knight => self.get_pseudo_legal_knight_moves_from_pos(pos),
+                Piece::Bishop => self.get_pseudo_legal_bishop_moves_from_pos(pos),
+                Piece::Rook => self.get_pseudo_legal_rook_moves_from_pos(pos),
                 Piece::Queen => {
                     vec![]
                 }
-                Piece::King => self.get_pseudo_legal_king_moves_from(pos),
+                Piece::King => self.get_pseudo_legal_king_moves_from_pos(pos),
             },
         };
 
         moves
     }
 
-    fn get_pseudo_legal_king_moves_from(&self, pos: &Position) -> Vec<Move> {
+    fn get_pseudo_legal_king_moves_from_pos(&self, pos: &Position) -> Vec<Move> {
         let mut moves = Vec::with_capacity(8);
         for (r, c) in [
             (1, 0),
@@ -186,14 +186,31 @@ impl Board {
         moves
     }
 
-    fn get_pseudo_legal_rook_moves_from(&self, pos: &Position) -> Vec<Move> {
-        vec![]
+    fn get_pseudo_legal_rook_moves_from_pos(&self, pos: &Position) -> Vec<Move> {
+        let mut moves = Vec::with_capacity(16);
+        let all_bitboard = self.white_piece_bitboard | self.black_piece_bitboard;
+        let opponent_bitboard = match self.turn {
+            Player::White => self.black_piece_bitboard,
+            Player::Black => self.white_piece_bitboard,
+        };
+        for (r, c) in [(1, 0), (-1, 0), (0, 1), (0, -1)].iter() {
+            let mut n_pos = Position::new(pos.row + r, pos.col + c);
+            while n_pos.valid() && n_pos.bitboard() & all_bitboard == 0 {
+                moves.push(Move::new(pos, &n_pos));
+                n_pos.col += c;
+                n_pos.row += r;
+            }
+            if n_pos.valid() && n_pos.bitboard() & opponent_bitboard != 0 {
+                moves.push(Move::new(pos, &n_pos));
+            }
+        }
+        moves
     }
 
-    fn get_pseudo_legal_bishop_moves_from(&self, pos: &Position) -> Vec<Move> {
+    fn get_pseudo_legal_bishop_moves_from_pos(&self, pos: &Position) -> Vec<Move> {
         vec![]
     }
-    fn get_pseudo_legal_knight_moves_from(&self, pos: &Position) -> Vec<Move> {
+    fn get_pseudo_legal_knight_moves_from_pos(&self, pos: &Position) -> Vec<Move> {
         let mut moves = Vec::with_capacity(8);
         for (r, c) in [
             (2, 1),
@@ -215,7 +232,7 @@ impl Board {
         moves
     }
 
-    fn get_pseudo_legal_pawn_moves_from(&self, pos: &Position) -> Vec<Move> {
+    fn get_pseudo_legal_pawn_moves_from_pos(&self, pos: &Position) -> Vec<Move> {
         match self.turn {
             Player::White => {
                 let mut moves = Vec::with_capacity(4);
