@@ -5,18 +5,19 @@ use std::{error::Error, fmt::Display, str::FromStr};
 pub struct Board {
     pub turn: Player,
     pub moves_since_capture: u8,
+    /// white, black
     pub can_castle_kingside: [bool; 2],
     /// white, black
     pub can_castle_queenside: [bool; 2],
-    /// white, black
     pub piece_bitboards: [u64; 6],
     pub white_piece_bitboard: u64,
     pub black_piece_bitboard: u64,
-    pub captured_pieces: Vec<Piece>,
+    pub captured_pieces: Vec<(Piece, Position)>,
     pub made_moves: Vec<(Move, bool)>,
+    pub possible_en_passant: Option<Position>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Position {
     pub col: i64,
     pub row: i64,
@@ -92,7 +93,7 @@ impl Board {
 
     // Make a move or return an error if move is not valid
     pub fn make_move(&mut self, cmove: Move) -> Result<(), &str> {
-        let to = cmove.to().bitboard();
+        let mut to = cmove.to().bitboard();
         let from = cmove.from();
         if !self.piece_type(&from).is_some_and(|x| x.0 == self.turn) {
             return Err("Invalid move: Can only move from square occupied by yourself");
@@ -116,8 +117,21 @@ impl Board {
                     *cap_bitboard = *cap_bitboard & !to;
 
                     self.black_piece_bitboard = self.black_piece_bitboard & !to;
-                    self.captured_pieces.push(captured_piece.1);
+                    self.captured_pieces.push((captured_piece.1, cmove.to()));
                     capture = true;
+                }
+                if let Some(ref p) = self.possible_en_passant {
+                    if *p == cmove.to() && piece.1 == Piece::Pawn {
+                        let mut piece_pos = cmove.to();
+                        piece_pos.row -= 1;
+                        let cap_bitboard = &mut self.piece_bitboards[Piece::Pawn.bitboard_index()];
+                        *cap_bitboard = *cap_bitboard & !piece_pos.bitboard();
+
+                        self.black_piece_bitboard =
+                            self.black_piece_bitboard & !piece_pos.bitboard();
+                        self.captured_pieces.push((Piece::Pawn, piece_pos));
+                        capture = true;
+                    }
                 }
                 self.white_piece_bitboard = self.white_piece_bitboard & !from;
                 self.white_piece_bitboard = self.white_piece_bitboard | to;
@@ -135,21 +149,49 @@ impl Board {
 
                     self.white_piece_bitboard = self.white_piece_bitboard & !to;
 
-                    self.captured_pieces.push(captured_piece.1);
+                    self.captured_pieces.push((captured_piece.1, cmove.to()));
+                }
+                if let Some(ref p) = self.possible_en_passant {
+                    if *p == cmove.to() && piece.1 == Piece::Pawn {
+                        let mut piece_pos = cmove.to();
+                        piece_pos.row += 1;
+                        let cap_bitboard = &mut self.piece_bitboards[Piece::Pawn.bitboard_index()];
+                        *cap_bitboard = *cap_bitboard & !piece_pos.bitboard();
+                        self.white_piece_bitboard =
+                            self.white_piece_bitboard & !piece_pos.bitboard();
+                        self.captured_pieces.push((Piece::Pawn, piece_pos));
+                        capture = true;
+                    }
                 }
                 self.black_piece_bitboard = self.black_piece_bitboard & !from;
                 self.black_piece_bitboard = self.black_piece_bitboard | to;
                 self.turn = Player::White;
             }
         }
+
         let piece_bitboard = &mut self.piece_bitboards[piece.1.bitboard_index()];
-        self.made_moves.push((cmove, capture));
+        self.made_moves.push((cmove.clone(), capture));
+
         *piece_bitboard = *piece_bitboard & !from;
         *piece_bitboard = *piece_bitboard | to;
         if !self.is_valid() {
             self.unmake_last();
             return Err("This leaves the king in check");
         }
+
+        // If moved pawn two steps. Set possible en passant to en passant location.
+        self.possible_en_passant = if piece.1 == Piece::Pawn {
+            if (cmove.to().row - cmove.from().row).abs() == 2 {
+                Some(Position::new(
+                    (cmove.to().row + cmove.from().row) / 2,
+                    cmove.from().col,
+                ))
+            } else {
+                None
+            }
+        } else {
+            None
+        };
         Ok(())
     }
 
@@ -422,11 +464,23 @@ impl Board {
                     }
                 }
                 let take_right = Position::new(pos.row + 1, pos.col + 1);
-                if take_right.valid() && take_right.bitboard() & self.black_piece_bitboard != 0 {
+                if take_right.valid()
+                    && (take_right.bitboard() & self.black_piece_bitboard != 0
+                        || self
+                            .possible_en_passant
+                            .as_ref()
+                            .is_some_and(|x| *x == take_right))
+                {
                     moves.push(Move::new(pos, &take_right));
                 }
                 let take_left = Position::new(pos.row + 1, pos.col - 1);
-                if take_left.valid() && take_left.bitboard() & self.black_piece_bitboard != 0 {
+                if take_left.valid()
+                    && (take_left.bitboard() & self.black_piece_bitboard != 0
+                        || self
+                            .possible_en_passant
+                            .as_ref()
+                            .is_some_and(|x| *x == take_left))
+                {
                     moves.push(Move::new(pos, &take_left));
                 }
                 moves
@@ -445,11 +499,23 @@ impl Board {
                     }
                 }
                 let take_right = Position::new(pos.row - 1, pos.col + 1);
-                if take_right.valid() && take_right.bitboard() & self.white_piece_bitboard != 0 {
+                if take_right.valid()
+                    && (take_right.bitboard() & self.white_piece_bitboard != 0
+                        || self
+                            .possible_en_passant
+                            .as_ref()
+                            .is_some_and(|x| *x == take_right))
+                {
                     moves.push(Move::new(pos, &take_right));
                 }
                 let take_left = Position::new(pos.row - 1, pos.col - 1);
-                if take_left.valid() && take_left.bitboard() & (self.white_piece_bitboard) != 0 {
+                if take_left.valid()
+                    && (take_left.bitboard() & (self.white_piece_bitboard) != 0
+                        || self
+                            .possible_en_passant
+                            .as_ref()
+                            .is_some_and(|x| *x == take_left))
+                {
                     moves.push(Move::new(pos, &take_left));
                 }
 
@@ -485,8 +551,8 @@ impl Board {
                         .pop()
                         .expect("Failure: invalid board state in unmake_last function");
                     self.white_piece_bitboard = self.white_piece_bitboard | cmove.to().bitboard();
-                    let piece_bitboard = &mut self.piece_bitboards[last_capture.bitboard_index()];
-                    *piece_bitboard = *piece_bitboard | cmove.to().bitboard();
+                    let piece_bitboard = &mut self.piece_bitboards[last_capture.0.bitboard_index()];
+                    *piece_bitboard = *piece_bitboard | last_capture.1.bitboard();
                 }
             }
             Player::Black => {
@@ -513,8 +579,8 @@ impl Board {
                         .pop()
                         .expect("Failure: invalid board state in unmake_last function");
                     self.black_piece_bitboard = self.black_piece_bitboard | cmove.to().bitboard();
-                    let piece_bitboard = &mut self.piece_bitboards[last_capture.bitboard_index()];
-                    *piece_bitboard = *piece_bitboard | cmove.to().bitboard();
+                    let piece_bitboard = &mut self.piece_bitboards[last_capture.0.bitboard_index()];
+                    *piece_bitboard = *piece_bitboard | last_capture.1.bitboard();
                 }
             }
         }
@@ -541,6 +607,7 @@ impl Default for Board {
             black_piece_bitboard: 0xffff000000000000,
             captured_pieces: vec![],
             made_moves: vec![],
+            possible_en_passant: None,
         }
     }
 }
