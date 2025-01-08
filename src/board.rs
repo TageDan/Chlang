@@ -15,26 +15,32 @@ pub struct Board {
 
 #[derive(Debug, Clone)]
 pub struct Position {
-    pub col: u32,
-    pub row: u32,
+    pub col: i64,
+    pub row: i64,
 }
 
 impl Position {
     pub fn bitboard(&self) -> u64 {
-        2_u64.pow(self.row * 8 + self.col)
+        2_u64.pow((self.row * 8 + self.col) as u32)
     }
     pub fn valid(&self) -> bool {
-        self.col < 8 && self.row < 8
+        self.col < 8 && self.row < 8 && self.col >= 0 && self.row >= 0
+    }
+    pub fn new<T>(row: T, col: T) -> Self
+    where
+        T: Into<i64>,
+    {
+        Position {
+            col: col.into(),
+            row: row.into(),
+        }
     }
 }
 
 impl From<u64> for Position {
     fn from(value: u64) -> Self {
         let l = value.ilog2();
-        Self {
-            col: l % 8,
-            row: l / 8,
-        }
+        Self::new(l / 8, l % 8)
     }
 }
 

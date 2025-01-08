@@ -85,16 +85,16 @@ impl Move {
         let from = (self.bit_rep & 0b111111) as u32;
         let col = from % 8;
         let row = from / 8;
-        Position { col, row }
+        Position::new(row, col)
     }
     pub fn to(&self) -> Position {
         // extract end square from bits
         let to = (self.bit_rep >> 6 & 0b111111) as u32;
         let col = to % 8;
         let row = to / 8;
-        Position { col, row }
+        Position::new(row, col)
     }
-    pub fn new(from: Position, to: Position) -> Self {
+    pub fn new(from: &Position, to: &Position) -> Self {
         let last_6_bits = (from.row * 8 + from.col) as u16;
         let first_6_bits = ((to.row * 8 + to.col) << 6) as u16;
         Self {
