@@ -1,19 +1,22 @@
 use crate::{cmove::Move, piece::Piece};
-use std::{error::Error, fmt::Display, str::FromStr};
+use std::{
+    fmt::Display,
+    io::{self, Stdin},
+    str::FromStr,
+};
 
 /// Bitboard representation of a chess board
 pub struct Board {
     pub turn: Player,
     pub moves_since_capture: u8,
-    /// white, black
-    pub can_castle_kingside: [bool; 2],
-    /// white, black
-    pub can_castle_queenside: [bool; 2],
+    /// black, white
+    pub can_castle_short: [bool; 2],
+    /// black, white
+    pub can_castle_long: [bool; 2],
     pub piece_bitboards: [u64; 6],
     pub white_piece_bitboard: u64,
     pub black_piece_bitboard: u64,
-    pub captured_pieces: Vec<(Piece, Position)>,
-    pub made_moves: Vec<(Move, bool)>,
+    pub made_moves: Vec<Move>,
     pub possible_en_passant: Option<Position>,
 }
 
@@ -92,7 +95,7 @@ impl Board {
     }
 
     // Make a move or return an error if move is not valid
-    pub fn make_move(&mut self, cmove: Move) -> Result<(), &str> {
+    pub fn make_move(&mut self, cmove: &Move) -> Result<(), &str> {
         let mut to = cmove.to().bitboard();
         let from = cmove.from();
         if !self.piece_type(&from).is_some_and(|x| x.0 == self.turn) {
@@ -105,8 +108,12 @@ impl Board {
         }
         let from = from.bitboard();
         let mut capture = false;
+        let mut new_long_castle_rights = true;
+        let mut new_short_castle_rights = true;
         match self.turn {
             Player::White => {
+                new_short_castle_rights = self.can_castle_short[Player::White.idx()];
+                new_long_castle_rights = self.can_castle_long[Player::White.idx()];
                 if let Some(captured_piece) = self.piece_type(&cmove.to()) {
                     if captured_piece.0 == Player::White {
                         return Err("Invalid move: Cannot capture your own piece");
@@ -117,7 +124,6 @@ impl Board {
                     *cap_bitboard = *cap_bitboard & !to;
 
                     self.black_piece_bitboard = self.black_piece_bitboard & !to;
-                    self.captured_pieces.push((captured_piece.1, cmove.to()));
                     capture = true;
                 }
                 if let Some(ref p) = self.possible_en_passant {
@@ -129,15 +135,59 @@ impl Board {
 
                         self.black_piece_bitboard =
                             self.black_piece_bitboard & !piece_pos.bitboard();
-                        self.captured_pieces.push((Piece::Pawn, piece_pos));
                         capture = true;
                     }
                 }
+
+                if piece.1 == Piece::King && (cmove.to().col - cmove.from().col).abs() >= 2 {
+                    match cmove.to().col {
+                        2 => {
+                            // long castle
+
+                            let rook_bitboard =
+                                &mut self.piece_bitboards[Piece::Rook.bitboard_index()];
+
+                            // Remove old rook
+                            self.white_piece_bitboard =
+                                self.white_piece_bitboard & !Position::new(0, 0).bitboard();
+
+                            *rook_bitboard = *rook_bitboard & !Position::new(0, 0).bitboard();
+
+                            // Add new rook
+                            self.white_piece_bitboard =
+                                self.white_piece_bitboard | Position::new(0, 3).bitboard();
+
+                            *rook_bitboard = *rook_bitboard | Position::new(0, 3).bitboard();
+                        }
+                        6 => {
+                            // short castle
+
+                            let rook_bitboard =
+                                &mut self.piece_bitboards[Piece::Rook.bitboard_index()];
+
+                            // Remove old rook
+                            self.white_piece_bitboard =
+                                self.white_piece_bitboard & !Position::new(0, 7).bitboard();
+
+                            *rook_bitboard = *rook_bitboard & !Position::new(0, 7).bitboard();
+
+                            // Add new rook
+                            self.white_piece_bitboard =
+                                self.white_piece_bitboard | Position::new(0, 5).bitboard();
+
+                            *rook_bitboard = *rook_bitboard | Position::new(0, 5).bitboard();
+                        }
+                        _ => return Err("invalid_move"),
+                    }
+                }
+
                 self.white_piece_bitboard = self.white_piece_bitboard & !from;
                 self.white_piece_bitboard = self.white_piece_bitboard | to;
                 self.turn = Player::Black;
             }
             Player::Black => {
+                new_short_castle_rights = self.can_castle_short[Player::Black.idx()];
+                new_long_castle_rights = self.can_castle_long[Player::Black.idx()];
                 if let Some(captured_piece) = self.piece_type(&cmove.to()) {
                     if captured_piece.0 == Player::Black {
                         return Err("Invalid move: Cannot capture your own piece");
@@ -148,8 +198,6 @@ impl Board {
                     *cap_bitboard = *cap_bitboard & !to;
 
                     self.white_piece_bitboard = self.white_piece_bitboard & !to;
-
-                    self.captured_pieces.push((captured_piece.1, cmove.to()));
                 }
                 if let Some(ref p) = self.possible_en_passant {
                     if *p == cmove.to() && piece.1 == Piece::Pawn {
@@ -159,10 +207,52 @@ impl Board {
                         *cap_bitboard = *cap_bitboard & !piece_pos.bitboard();
                         self.white_piece_bitboard =
                             self.white_piece_bitboard & !piece_pos.bitboard();
-                        self.captured_pieces.push((Piece::Pawn, piece_pos));
                         capture = true;
                     }
                 }
+
+                if piece.1 == Piece::King && (cmove.to().col - cmove.from().col).abs() >= 2 {
+                    match cmove.to().col {
+                        2 => {
+                            // long castle
+
+                            let rook_bitboard =
+                                &mut self.piece_bitboards[Piece::Rook.bitboard_index()];
+
+                            // Remove old rook
+                            self.black_piece_bitboard =
+                                self.black_piece_bitboard & !Position::new(7, 0).bitboard();
+
+                            *rook_bitboard = *rook_bitboard & !Position::new(7, 0).bitboard();
+
+                            // Add new rook
+                            self.black_piece_bitboard =
+                                self.black_piece_bitboard | Position::new(7, 3).bitboard();
+
+                            *rook_bitboard = *rook_bitboard | Position::new(7, 3).bitboard();
+                        }
+                        6 => {
+                            // short castle
+
+                            let rook_bitboard =
+                                &mut self.piece_bitboards[Piece::Rook.bitboard_index()];
+
+                            // Remove old rook
+                            self.black_piece_bitboard =
+                                self.black_piece_bitboard & !Position::new(7, 7).bitboard();
+
+                            *rook_bitboard = *rook_bitboard & !Position::new(7, 7).bitboard();
+
+                            // Add new rook
+                            self.black_piece_bitboard =
+                                self.black_piece_bitboard | Position::new(7, 5).bitboard();
+
+                            *rook_bitboard = *rook_bitboard | Position::new(7, 5).bitboard();
+                        }
+                        _ => return Err("invalid_move"),
+                    }
+                }
+
                 self.black_piece_bitboard = self.black_piece_bitboard & !from;
                 self.black_piece_bitboard = self.black_piece_bitboard | to;
                 self.turn = Player::White;
@@ -170,13 +260,30 @@ impl Board {
         }
 
         let piece_bitboard = &mut self.piece_bitboards[piece.1.bitboard_index()];
-        self.made_moves.push((cmove.clone(), capture));
+        self.made_moves.push(cmove.clone());
 
         *piece_bitboard = *piece_bitboard & !from;
         *piece_bitboard = *piece_bitboard | to;
         if !self.is_valid() {
             self.unmake_last();
             return Err("This leaves the king in check");
+        }
+
+        if piece.1 == Piece::King {
+            new_short_castle_rights = false;
+            new_long_castle_rights = false;
+        }
+
+        if piece.1 == Piece::Rook {
+            match cmove.from().col {
+                0 => {
+                    new_long_castle_rights = false;
+                }
+                7 => {
+                    new_short_castle_rights = false;
+                }
+                _ => (),
+            }
         }
 
         // If moved pawn two steps. Set possible en passant to en passant location.
@@ -240,14 +347,20 @@ impl Board {
                     self.get_pseudo_legal_bishop_moves_from_pos(pos, &color),
                 ]
                 .concat(),
-                Piece::King => self.get_pseudo_legal_king_moves_from_pos(pos, &color),
+                Piece::King => self.get_pseudo_legal_king_moves_from_pos(pos, &color, true),
             },
         };
 
         moves
     }
 
-    fn get_pseudo_legal_king_moves_from_pos(&self, pos: &Position, color: &Player) -> Vec<Move> {
+    fn get_pseudo_legal_king_moves_from_pos(
+        &self,
+        pos: &Position,
+        color: &Player,
+        with_castles: bool,
+    ) -> Vec<Move> {
+        let all_piece_bitboard = self.white_piece_bitboard | self.black_piece_bitboard;
         let mut moves = Vec::with_capacity(8);
         for (r, c) in [
             (1, 0),
@@ -266,10 +379,130 @@ impl Board {
                 moves.push(Move::new(pos, &n_position));
             }
         }
+        match self.turn {
+            Player::White => {
+                // check if pieces are blocking between king and rook
+                if with_castles
+                    && self.can_castle_short[Player::White.idx()]
+                    && (self.white_piece_bitboard | self.black_piece_bitboard) & 0x60 == 0
+                {
+                    if !(self.attacked_by_color(pos, &Player::Black)
+                        || self.attacked_by_color(
+                            &Position::new(pos.row, pos.col + 1),
+                            &Player::Black,
+                        )
+                        || self.attacked_by_color(
+                            &Position::new(pos.row, pos.col + 2),
+                            &Player::Black,
+                        ))
+                    {
+                        moves.push(Move::new(
+                            pos,
+                            &Position {
+                                col: pos.col + 2,
+                                row: pos.row,
+                            },
+                        ))
+                    }
+                }
+                // check if pieces are blocking between king and rook
+                if with_castles
+                    && self.can_castle_long[Player::White.idx()]
+                    && (self.white_piece_bitboard | self.black_piece_bitboard) & 0xe == 0
+                {
+                    // check if intermediate positions are attacked
+                    if !(self.attacked_by_color(pos, &Player::Black)
+                        || self.attacked_by_color(
+                            &Position::new(pos.row, pos.col - 1),
+                            &Player::Black,
+                        )
+                        || self.attacked_by_color(
+                            &Position::new(pos.row, pos.col - 2),
+                            &Player::Black,
+                        )
+                        || self.attacked_by_color(
+                            &Position::new(pos.row, pos.col - 3),
+                            &Player::Black,
+                        ))
+                    {
+                        moves.push(Move::new(
+                            pos,
+                            &Position {
+                                col: pos.col - 2,
+                                row: pos.row,
+                            },
+                        ))
+                    }
+                }
+            }
+
+            Player::Black => {
+                // check if pieces are blocking between king and rook
+                if with_castles
+                    && self.can_castle_short[Player::Black.idx()]
+                    && (self.white_piece_bitboard | self.black_piece_bitboard) & 0x6000000000000000
+                        == 0
+                {
+                    // check if intermediate positions are attacked
+                    if !(self.attacked_by_color(pos, &Player::White)
+                        || self.attacked_by_color(
+                            &Position::new(pos.row, pos.col + 1),
+                            &Player::White,
+                        )
+                        || self.attacked_by_color(
+                            &Position::new(pos.row, pos.col + 2),
+                            &Player::White,
+                        ))
+                    {
+                        moves.push(Move::new(
+                            pos,
+                            &Position {
+                                col: pos.col + 2,
+                                row: pos.row,
+                            },
+                        ))
+                    }
+                }
+                // check if pieces are blocking between king and rook
+                if with_castles
+                    && self.can_castle_long[Player::Black.idx()]
+                    && (self.white_piece_bitboard | self.black_piece_bitboard) & 0xe00000000000000
+                        == 0
+                {
+                    // check if intermediate positions are attacked
+                    if !(self.attacked_by_color(pos, &Player::White)
+                        || self.attacked_by_color(
+                            &Position::new(pos.row, pos.col - 1),
+                            &Player::White,
+                        )
+                        || self.attacked_by_color(
+                            &Position::new(pos.row, pos.col - 2),
+                            &Player::White,
+                        )
+                        || self.attacked_by_color(
+                            &Position::new(pos.row, pos.col - 3),
+                            &Player::White,
+                        ))
+                    {
+                        moves.push(Move::new(
+                            pos,
+                            &Position {
+                                col: pos.col - 2,
+                                row: pos.row,
+                            },
+                        ))
+                    }
+                }
+            }
+        }
         moves
     }
 
-    fn get_pseudo_legal_rook_moves_from_pos(&self, pos: &Position, color: &Player) -> Vec<Move> {
+    pub fn get_pseudo_legal_rook_moves_from_pos(
+        &self,
+        pos: &Position,
+        color: &Player,
+    ) -> Vec<Move> {
         let mut moves = Vec::with_capacity(16);
         let all_bitboard = self.white_piece_bitboard | self.black_piece_bitboard;
         let opponent_bitboard = match color {
@@ -290,7 +523,11 @@ impl Board {
         moves
     }
 
-    fn get_pseudo_legal_bishop_moves_from_pos(&self, pos: &Position, color: &Player) -> Vec<Move> {
+    pub fn get_pseudo_legal_bishop_moves_from_pos(
+        &self,
+        pos: &Position,
+        color: &Player,
+    ) -> Vec<Move> {
         let mut moves = Vec::with_capacity(16);
         let all_bitboard = self.white_piece_bitboard | self.black_piece_bitboard;
         let opponent_bitboard = match color {
@@ -310,7 +547,11 @@ impl Board {
         }
         moves
     }
-    fn get_pseudo_legal_knight_moves_from_pos(&self, pos: &Position, color: &Player) -> Vec<Move> {
+    pub fn get_pseudo_legal_knight_moves_from_pos(
+        &self,
+        pos: &Position,
+        color: &Player,
+    ) -> Vec<Move> {
         let mut moves = Vec::with_capacity(8);
         for (r, c) in [
             (2, 1),
@@ -332,7 +573,11 @@ impl Board {
         moves
     }
 
-    fn get_pseudo_legal_pawn_moves_from_pos(&self, pos: &Position, color: &Player) -> Vec<Move> {
+    pub fn get_pseudo_legal_pawn_moves_from_pos(
+        &self,
+        pos: &Position,
+        color: &Player,
+    ) -> Vec<Move> {
         match color {
             Player::White => {
                 let mut moves = Vec::with_capacity(4);
@@ -561,8 +806,8 @@ impl Default for Board {
         Self {
             turn: Player::White,
             moves_since_capture: 0,
-            can_castle_kingside: [true, true],
-            can_castle_queenside: [true, true],
+            can_castle_long: [true, true],
+            can_castle_short: [true, true],
             piece_bitboards: [
                 0xff00000000ff00,   // pawns
                 0x4200000000000042, // knights
@@ -573,7 +818,6 @@ impl Default for Board {
             ],
             white_piece_bitboard: 0xffff,
             black_piece_bitboard: 0xffff000000000000,
-            captured_pieces: vec![],
             made_moves: vec![],
             possible_en_passant: None,
         }

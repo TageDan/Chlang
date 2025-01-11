@@ -7,6 +7,11 @@ pub mod cmove;
 pub mod piece;
 
 fn main() {
+    /* Only for development, shows a stacktrace on stack overflows
+    (added since I accidentaly ifinitely called a recursive function.
+    Solved by adding a boolean flag to the get_pseudo_legal_king_moves method)
+    */
+    unsafe { backtrace_on_stack_overflow::enable() };
     let mut board = board::Board::default();
     println!("\x1b[2J\x1b[H");
     println!("{}", board);
