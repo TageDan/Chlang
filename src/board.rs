@@ -192,156 +192,40 @@ impl Board {
         } else {
             None
         };
+        match self.turn {
+            Player::White => {
+                self.can_castle_short[Player::Black.idx()] = new_short_castle_rights;
+                self.can_castle_long[Player::White.idx()] = new_long_castle_rights;
+            }
+            Player::Black => {
+                self.can_castle_short[Player::White.idx()] = new_short_castle_rights;
+                self.can_castle_long[Player::Black.idx()] = new_long_castle_rights;
+            }
+        }
         Ok(())
     }
 
     /// Validate that king isn't in check on start of opponents turn
-    fn is_valid(&self) -> bool {
+    fn is_valid(&mut self) -> bool {
         match self.turn {
             Player::White => {
                 let king_pos = Position::from(
                     self.piece_bitboards[Piece::King.bitboard_index()] & self.black_piece_bitboard,
                 );
 
-                for cmove in self.get_pseudo_legal_king_moves_from_pos(&king_pos, &Player::Black) {
-                    if self
-                        .piece_type(&cmove.to())
-                        .is_some_and(|x| x.0 == Player::White && x.1 == Piece::King)
-                    {
-                        // attacked by king
-                        return false;
-                    }
-                }
-                for cmove in [
-                    self.get_pseudo_legal_rook_moves_from_pos(&king_pos, &Player::Black),
-                    self.get_pseudo_legal_bishop_moves_from_pos(&king_pos, &Player::Black),
-                ]
-                .concat()
-                {
-                    if self
-                        .piece_type(&cmove.to())
-                        .is_some_and(|x| x.0 == Player::White && x.1 == Piece::Queen)
-                    {
-                        // attacked by queen
-                        return false;
-                    }
-                }
-                for cmove in self.get_pseudo_legal_bishop_moves_from_pos(&king_pos, &Player::Black)
-                {
-                    if self
-                        .piece_type(&cmove.to())
-                        .is_some_and(|x| x.0 == Player::White && x.1 == Piece::Bishop)
-                    {
-                        // attacked by bishop
-                        return false;
-                    }
-                }
-                for cmove in self.get_pseudo_legal_rook_moves_from_pos(&king_pos, &Player::Black) {
-                    if self
-                        .piece_type(&cmove.to())
-                        .is_some_and(|x| x.0 == Player::White && x.1 == Piece::Rook)
-                    {
-                        // attacked by Rook
-                        return false;
-                    }
-                }
-                for cmove in self.get_pseudo_legal_knight_moves_from_pos(&king_pos, &Player::Black)
-                {
-                    if self
-                        .piece_type(&cmove.to())
-                        .is_some_and(|x| x.0 == Player::White && x.1 == Piece::Knight)
-                    {
-                        // attacked by knight
-                        return false;
-                    }
-                }
-                for cmove in self.get_pseudo_legal_pawn_moves_from_pos(&king_pos, &Player::Black) {
-                    if cmove.to().col == king_pos.col {
-                        continue;
-                    }
-                    if self
-                        .piece_type(&cmove.to())
-                        .is_some_and(|x| x.0 == Player::White && x.1 == Piece::Pawn)
-                    {
-                        // attacked by pawn
-                        return false;
-                    }
-                }
+                return !self.attacked_by_color(&king_pos, &Player::White);
             }
             Player::Black => {
                 let king_pos = Position::from(
                     self.piece_bitboards[Piece::King.bitboard_index()] & self.white_piece_bitboard,
                 );
-                for cmove in self.get_pseudo_legal_king_moves_from_pos(&king_pos, &Player::White) {
-                    if self
-                        .piece_type(&cmove.to())
-                        .is_some_and(|x| x.0 == Player::Black && x.1 == Piece::King)
-                    {
-                        // attacked by king
-                        return false;
-                    }
-                }
-                for cmove in [
-                    self.get_pseudo_legal_rook_moves_from_pos(&king_pos, &Player::White),
-                    self.get_pseudo_legal_bishop_moves_from_pos(&king_pos, &Player::White),
-                ]
-                .concat()
-                {
-                    if self
-                        .piece_type(&cmove.to())
-                        .is_some_and(|x| x.0 == Player::Black && x.1 == Piece::Queen)
-                    {
-                        // attacked by queen
-                        return false;
-                    }
-                }
-                for cmove in self.get_pseudo_legal_bishop_moves_from_pos(&king_pos, &Player::White)
-                {
-                    if self
-                        .piece_type(&cmove.to())
-                        .is_some_and(|x| x.0 == Player::Black && x.1 == Piece::Bishop)
-                    {
-                        // attacked by bishop
-                        return false;
-                    }
-                }
-                for cmove in self.get_pseudo_legal_rook_moves_from_pos(&king_pos, &Player::White) {
-                    if self
-                        .piece_type(&cmove.to())
-                        .is_some_and(|x| x.0 == Player::Black && x.1 == Piece::Rook)
-                    {
-                        // attacked by Rook
-                        return false;
-                    }
-                }
-                for cmove in self.get_pseudo_legal_knight_moves_from_pos(&king_pos, &Player::White)
-                {
-                    if self
-                        .piece_type(&cmove.to())
-                        .is_some_and(|x| x.0 == Player::Black && x.1 == Piece::Knight)
-                    {
-                        // attacked by knight
-                        return false;
-                    }
-                }
-                for cmove in self.get_pseudo_legal_pawn_moves_from_pos(&king_pos, &Player::White) {
-                    if cmove.to().col == king_pos.col {
-                        continue;
-                    }
-                    if self
-                        .piece_type(&cmove.to())
-                        .is_some_and(|x| x.0 == Player::Black && x.1 == Piece::Pawn)
-                    {
-                        // attacked by pawn
-                        return false;
-                    }
-                }
+
+                return !self.attacked_by_color(&king_pos, &Player::Black);
             }
         }
-        true
     }
 
-    fn get_pseudo_legal_moves_from_pos(&self, pos: &Position) -> Vec<Move> {
+    pub fn get_pseudo_legal_moves_from_pos(&self, pos: &Position) -> Vec<Move> {
         let moves = match self.piece_type(pos) {
             None => {
                 panic!("No piece on square");
@@ -525,63 +409,147 @@ impl Board {
     }
 
     /// unmake the last move on the board
-    fn unmake_last(&mut self) {
-        match self.turn {
-            Player::White => {
-                self.turn = Player::Black;
-                let last_move = self
-                    .made_moves
-                    .pop()
-                    .expect("Failure: invalid board state in unmake_last function");
+    pub fn unmake_last(&mut self) {
+        let mut new_board = Board::default();
+        for cmove in self.made_moves[0..self.made_moves.len() - 1].iter() {
+            new_board.make_move(cmove);
+        }
+        *self = new_board;
+    }
 
-                let cmove = last_move.0;
-                let piece_type = self
-                    .piece_type(&cmove.to())
-                    .expect("Failure: invalid board state in unmake_last function");
-
-                self.black_piece_bitboard = self.black_piece_bitboard | cmove.from().bitboard();
-                let piece_bitboard = &mut self.piece_bitboards[piece_type.1.bitboard_index()];
-                *piece_bitboard = *piece_bitboard | cmove.from().bitboard();
-                self.black_piece_bitboard = self.black_piece_bitboard & !cmove.to().bitboard();
-                *piece_bitboard = *piece_bitboard & !cmove.to().bitboard();
-
-                if last_move.1 {
-                    let last_capture = self
-                        .captured_pieces
-                        .pop()
-                        .expect("Failure: invalid board state in unmake_last function");
-                    self.white_piece_bitboard = self.white_piece_bitboard | cmove.to().bitboard();
-                    let piece_bitboard = &mut self.piece_bitboards[last_capture.0.bitboard_index()];
-                    *piece_bitboard = *piece_bitboard | last_capture.1.bitboard();
-                }
-            }
+    pub fn attacked_by_color(&self, pos: &Position, color: &Player) -> bool {
+        match color {
             Player::Black => {
-                self.turn = Player::White;
-                let last_move = self
-                    .made_moves
-                    .pop()
-                    .expect("Failure: invalid board state in unmake_last function");
-
-                let cmove = last_move.0;
-                let piece_type = self
-                    .piece_type(&cmove.to())
-                    .expect("Failure: invalid board state in unmake_last function");
-
-                self.white_piece_bitboard = self.white_piece_bitboard | cmove.from().bitboard();
-                let piece_bitboard = &mut self.piece_bitboards[piece_type.1.bitboard_index()];
-                *piece_bitboard = *piece_bitboard | cmove.from().bitboard();
-                self.white_piece_bitboard = self.white_piece_bitboard & !cmove.to().bitboard();
-                *piece_bitboard = *piece_bitboard & !cmove.to().bitboard();
-
-                if last_move.1 {
-                    let last_capture = self
-                        .captured_pieces
-                        .pop()
-                        .expect("Failure: invalid board state in unmake_last function");
-                    self.black_piece_bitboard = self.black_piece_bitboard | cmove.to().bitboard();
-                    let piece_bitboard = &mut self.piece_bitboards[last_capture.0.bitboard_index()];
-                    *piece_bitboard = *piece_bitboard | last_capture.1.bitboard();
+                for cmove in self.get_pseudo_legal_king_moves_from_pos(&pos, &Player::White, false)
+                {
+                    if self
+                        .piece_type(&cmove.to())
+                        .is_some_and(|x| x.0 == Player::Black && x.1 == Piece::King)
+                    {
+                        // attacked by king
+                        return true;
+                    }
                 }
+                for cmove in [
+                    self.get_pseudo_legal_rook_moves_from_pos(&pos, &Player::White),
+                    self.get_pseudo_legal_bishop_moves_from_pos(&pos, &Player::White),
+                ]
+                .concat()
+                {
+                    if self
+                        .piece_type(&cmove.to())
+                        .is_some_and(|x| x.0 == Player::Black && x.1 == Piece::Queen)
+                    {
+                        // attacked by queen
+                        return true;
+                    }
+                }
+                for cmove in self.get_pseudo_legal_bishop_moves_from_pos(&pos, &Player::White) {
+                    if self
+                        .piece_type(&cmove.to())
+                        .is_some_and(|x| x.0 == Player::Black && x.1 == Piece::Bishop)
+                    {
+                        // attacked by bishop
+                        return true;
+                    }
+                }
+                for cmove in self.get_pseudo_legal_rook_moves_from_pos(&pos, &Player::White) {
+                    if self
+                        .piece_type(&cmove.to())
+                        .is_some_and(|x| x.0 == Player::Black && x.1 == Piece::Rook)
+                    {
+                        // attacked by Rook
+                        return true;
+                    }
+                }
+                for cmove in self.get_pseudo_legal_knight_moves_from_pos(&pos, &Player::White) {
+                    if self
+                        .piece_type(&cmove.to())
+                        .is_some_and(|x| x.0 == Player::Black && x.1 == Piece::Knight)
+                    {
+                        // attacked by knight
+                        return true;
+                    }
+                }
+                for cmove in self.get_pseudo_legal_pawn_moves_from_pos(&pos, &Player::White) {
+                    if cmove.to().col == pos.col {
+                        continue;
+                    }
+                    if self
+                        .piece_type(&cmove.to())
+                        .is_some_and(|x| x.0 == Player::Black && x.1 == Piece::Pawn)
+                    {
+                        // attacked by pawn
+                        return true;
+                    }
+                }
+                return false;
+            }
+            Player::White => {
+                for cmove in self.get_pseudo_legal_king_moves_from_pos(&pos, &Player::Black, false)
+                {
+                    if self
+                        .piece_type(&cmove.to())
+                        .is_some_and(|x| x.0 == Player::White && x.1 == Piece::King)
+                    {
+                        // attacked by king
+                        return true;
+                    }
+                }
+                for cmove in [
+                    self.get_pseudo_legal_rook_moves_from_pos(&pos, &Player::Black),
+                    self.get_pseudo_legal_bishop_moves_from_pos(&pos, &Player::Black),
+                ]
+                .concat()
+                {
+                    if self
+                        .piece_type(&cmove.to())
+                        .is_some_and(|x| x.0 == Player::White && x.1 == Piece::Queen)
+                    {
+                        // attacked by queen
+                        return true;
+                    }
+                }
+                for cmove in self.get_pseudo_legal_bishop_moves_from_pos(&pos, &Player::Black) {
+                    if self
+                        .piece_type(&cmove.to())
+                        .is_some_and(|x| x.0 == Player::White && x.1 == Piece::Bishop)
+                    {
+                        // attacked by bishop
+                        return true;
+                    }
+                }
+                for cmove in self.get_pseudo_legal_rook_moves_from_pos(&pos, &Player::Black) {
+                    if self
+                        .piece_type(&cmove.to())
+                        .is_some_and(|x| x.0 == Player::White && x.1 == Piece::Rook)
+                    {
+                        // attacked by Rook
+                        return true;
+                    }
+                }
+                for cmove in self.get_pseudo_legal_knight_moves_from_pos(&pos, &Player::Black) {
+                    if self
+                        .piece_type(&cmove.to())
+                        .is_some_and(|x| x.0 == Player::White && x.1 == Piece::Knight)
+                    {
+                        // attacked by knight
+                        return true;
+                    }
+                }
+                for cmove in self.get_pseudo_legal_pawn_moves_from_pos(&pos, &Player::Black) {
+                    if cmove.to().col == pos.col {
+                        continue;
+                    }
+                    if self
+                        .piece_type(&cmove.to())
+                        .is_some_and(|x| x.0 == Player::White && x.1 == Piece::Pawn)
+                    {
+                        // attacked by pawn
+                        return true;
+                    }
+                }
+                return false;
             }
         }
     }
