@@ -103,7 +103,7 @@ impl Board {
         }
         let piece = self.piece_type(&from).ok_or("No piece")?;
         let pseudo_legal_moves = self.get_pseudo_legal_moves_from_pos(&from);
-        if !pseudo_legal_moves.contains(&cmove) {
+        if !pseudo_legal_moves.contains(&cmove.without_promotion()) {
             return Err("Not legal move");
         }
         let from = from.bitboard();
@@ -114,6 +114,31 @@ impl Board {
             Player::White => {
                 new_short_castle_rights = self.can_castle_short[Player::White.idx()];
                 new_long_castle_rights = self.can_castle_long[Player::White.idx()];
+
+                // Special pawn handling
+                if piece.1 == Piece::Pawn {
+                    // Must promote if going to last rank
+                    if cmove.to().row == 7 {
+                        if cmove.promotion_bitboard_index() == 0 {
+                            return Err("No promotion piece on promotion move");
+                        }
+                    }
+                    // En passant handling
+                    if let Some(ref p) = self.possible_en_passant {
+                        if *p == cmove.to() {
+                            let mut piece_pos = cmove.to();
+                            piece_pos.row -= 1;
+                            let cap_bitboard =
+                                &mut self.piece_bitboards[Piece::Pawn.bitboard_index()];
+                            *cap_bitboard = *cap_bitboard & !piece_pos.bitboard();
+
+                            self.black_piece_bitboard =
+                                self.black_piece_bitboard & !piece_pos.bitboard();
+                        }
+                    }
+                }
+
+                // Captures
                 if let Some(captured_piece) = self.piece_type(&cmove.to()) {
                     if captured_piece.0 == Player::White {
                         return Err("Invalid move: Cannot capture your own piece");
@@ -124,21 +149,9 @@ impl Board {
                     *cap_bitboard = *cap_bitboard & !to;
 
                     self.black_piece_bitboard = self.black_piece_bitboard & !to;
-                    capture = true;
-                }
-                if let Some(ref p) = self.possible_en_passant {
-                    if *p == cmove.to() && piece.1 == Piece::Pawn {
-                        let mut piece_pos = cmove.to();
-                        piece_pos.row -= 1;
-                        let cap_bitboard = &mut self.piece_bitboards[Piece::Pawn.bitboard_index()];
-                        *cap_bitboard = *cap_bitboard & !piece_pos.bitboard();
-
-                        self.black_piece_bitboard =
-                            self.black_piece_bitboard & !piece_pos.bitboard();
-                        capture = true;
-                    }
                 }
 
+                // Castle handling
                 if piece.1 == Piece::King && (cmove.to().col - cmove.from().col).abs() >= 2 {
                     match cmove.to().col {
                         2 => {
@@ -188,6 +201,30 @@ impl Board {
             Player::Black => {
                 new_short_castle_rights = self.can_castle_short[Player::Black.idx()];
                 new_long_castle_rights = self.can_castle_long[Player::Black.idx()];
+                // Special pawn handling
+                if piece.1 == Piece::Pawn {
+                    // Must promote if going to last rank
+                    if cmove.to().row == 0 {
+                        if cmove.promotion_bitboard_index() == 0 {
+                            return Err("No promotion piece on promotion move");
+                        }
+                    }
+                    // En passant handling
+                    if let Some(ref p) = self.possible_en_passant {
+                        if *p == cmove.to() {
+                            let mut piece_pos = cmove.to();
+                            piece_pos.row += 1;
+                            let cap_bitboard =
+                                &mut self.piece_bitboards[Piece::Pawn.bitboard_index()];
+                            *cap_bitboard = *cap_bitboard & !piece_pos.bitboard();
+                            self.white_piece_bitboard =
+                                self.white_piece_bitboard & !piece_pos.bitboard();
+                            capture = true;
+                        }
+                    }
+                }
+
+                // Captures
                 if let Some(captured_piece) = self.piece_type(&cmove.to()) {
                     if captured_piece.0 == Player::Black {
                         return Err("Invalid move: Cannot capture your own piece");
@@ -199,18 +236,8 @@ impl Board {
 
                     self.white_piece_bitboard = self.white_piece_bitboard & !to;
                 }
-                if let Some(ref p) = self.possible_en_passant {
-                    if *p == cmove.to() && piece.1 == Piece::Pawn {
-                        let mut piece_pos = cmove.to();
-                        piece_pos.row += 1;
-                        let cap_bitboard = &mut self.piece_bitboards[Piece::Pawn.bitboard_index()];
-                        *cap_bitboard = *cap_bitboard & !piece_pos.bitboard();
-                        self.white_piece_bitboard =
-                            self.white_piece_bitboard & !piece_pos.bitboard();
-                        capture = true;
-                    }
-                }
 
+                // Castle handling
                 if piece.1 == Piece::King && (cmove.to().col - cmove.from().col).abs() >= 2 {
                     match cmove.to().col {
                         2 => {
@@ -259,21 +286,37 @@ impl Board {
             }
         }
 
-        let piece_bitboard = &mut self.piece_bitboards[piece.1.bitboard_index()];
+        // Promotion
+        if piece.1 == Piece::Pawn && (cmove.to().row == 0 || cmove.to().row == 7) {
+            let bitboard_index = cmove.promotion_bitboard_index();
+            let piece_bitboard = &mut self.piece_bitboards[bitboard_index];
+
+            *piece_bitboard = *piece_bitboard | to;
+            let pawn_bitboard = &mut self.piece_bitboards[Piece::Pawn.bitboard_index()];
+            *pawn_bitboard = *pawn_bitboard & !from
+        }
+        // No promotion
+        else {
+            let piece_bitboard = &mut self.piece_bitboards[piece.1.bitboard_index()];
+
+            *piece_bitboard = *piece_bitboard & !from;
+            *piece_bitboard = *piece_bitboard | to;
+        }
+
         self.made_moves.push(cmove.clone());
 
-        *piece_bitboard = *piece_bitboard & !from;
-        *piece_bitboard = *piece_bitboard | to;
         if !self.is_valid() {
             self.unmake_last();
             return Err("This leaves the king in check");
         }
 
+        // Update en passant rules
         if piece.1 == Piece::King {
             new_short_castle_rights = false;
             new_long_castle_rights = false;
         }
 
+        // Update en passant rules
         if piece.1 == Piece::Rook {
             match cmove.from().col {
                 0 => {

@@ -19,6 +19,7 @@ fn main() {
     loop {
         let mut input = String::new();
         stdin.read_line(&mut input);
+        println!("\x1b[2J\x1b[H");
         if input.trim() == "u" {
             board.unmake_last();
         } else {
@@ -28,12 +29,11 @@ fn main() {
                 let res = board.make_move(&cmove.clone().unwrap());
                 if res.is_err() {
                     println!("error making move: {:?}", res);
-                    let _ = stdin.read_line(&mut String::new());
                 }
             }
+            println!("{cmove:?}");
         }
 
-        println!("\x1b[2J\x1b[H");
         println!("{}", board);
     }
 }
