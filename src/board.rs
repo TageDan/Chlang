@@ -5,7 +5,15 @@ use std::{
     str::FromStr,
 };
 
+#[derive(PartialEq, Clone)]
+pub enum GameState {
+    Playing,
+    Win(Player),
+    Draw,
+}
+
 /// Bitboard representation of a chess board
+#[derive(Clone, PartialEq)]
 pub struct Board {
     pub turn: Player,
     pub moves_since_capture: u8,
@@ -16,8 +24,9 @@ pub struct Board {
     pub piece_bitboards: [u64; 6],
     pub white_piece_bitboard: u64,
     pub black_piece_bitboard: u64,
-    pub made_moves: Vec<Move>,
     pub possible_en_passant: Option<Position>,
+    pub previous_board_states: Vec<Board>,
+    pub state: GameState,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -51,7 +60,7 @@ impl From<u64> for Position {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Player {
     White,
     Black,
@@ -107,9 +116,10 @@ impl Board {
             return Err("Not legal move");
         }
         let from = from.bitboard();
-        let mut capture = false;
         let mut new_long_castle_rights = true;
         let mut new_short_castle_rights = true;
+        let mut capture = false;
+        let old_board_state = self.clone();
         match self.turn {
             Player::White => {
                 new_short_castle_rights = self.can_castle_short[Player::White.idx()];
@@ -134,6 +144,7 @@ impl Board {
 
                             self.black_piece_bitboard =
                                 self.black_piece_bitboard & !piece_pos.bitboard();
+                            capture = true;
                         }
                     }
                 }
@@ -149,6 +160,7 @@ impl Board {
                     *cap_bitboard = *cap_bitboard & !to;
 
                     self.black_piece_bitboard = self.black_piece_bitboard & !to;
+                    capture = true;
                 }
 
                 // Castle handling
@@ -235,6 +247,7 @@ impl Board {
                     *cap_bitboard = *cap_bitboard & !to;
 
                     self.white_piece_bitboard = self.white_piece_bitboard & !to;
+                    capture = true;
                 }
 
                 // Castle handling
@@ -303,7 +316,7 @@ impl Board {
             *piece_bitboard = *piece_bitboard | to;
         }
 
-        self.made_moves.push(cmove.clone());
+        self.previous_board_states.push(old_board_state);
 
         if !self.is_valid() {
             self.unmake_last();
@@ -351,6 +364,11 @@ impl Board {
                 self.can_castle_short[Player::White.idx()] = new_short_castle_rights;
                 self.can_castle_long[Player::Black.idx()] = new_long_castle_rights;
             }
+        }
+        if capture {
+            self.moves_since_capture = 0;
+        } else {
+            self.moves_since_capture += 1;
         }
         Ok(())
     }
@@ -698,11 +716,7 @@ impl Board {
 
     /// unmake the last move on the board
     pub fn unmake_last(&mut self) {
-        let mut new_board = Board::default();
-        for cmove in self.made_moves[0..self.made_moves.len() - 1].iter() {
-            new_board.make_move(cmove);
-        }
-        *self = new_board;
+        *self = self.previous_board_states.pop().unwrap();
     }
 
     pub fn attacked_by_color(&self, pos: &Position, color: &Player) -> bool {
@@ -846,7 +860,7 @@ impl Board {
 impl Default for Board {
     /// Return the initial position
     fn default() -> Self {
-        Self {
+        let mut starting = Self {
             turn: Player::White,
             moves_since_capture: 0,
             can_castle_long: [true, true],
@@ -861,9 +875,12 @@ impl Default for Board {
             ],
             white_piece_bitboard: 0xffff,
             black_piece_bitboard: 0xffff000000000000,
-            made_moves: vec![],
+            state: GameState::Playing,
             possible_en_passant: None,
-        }
+            previous_board_states: vec![],
+        };
+        starting.previous_board_states.push(starting.clone());
+        starting
     }
 }
 
