@@ -1,4 +1,5 @@
 use crate::{cmove::Move, piece::Piece};
+
 use std::{
     collections::HashMap,
     fmt::Display,
@@ -975,7 +976,7 @@ impl Board {
 impl Default for Board {
     /// Return the initial position
     fn default() -> Self {
-        let mut starting = Self {
+        Self {
             turn: Player::White,
             moves_since_capture: 0,
             can_castle_long: [true, true],
@@ -991,9 +992,8 @@ impl Default for Board {
             white_piece_bitboard: 0xffff,
             black_piece_bitboard: 0xffff000000000000,
             possible_en_passant: None,
-            previous_board_states: vec![],
-        };
-        starting
+            previous_board_states: Vec::with_capacity(300),
+        }
     }
 }
 
