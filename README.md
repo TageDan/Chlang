@@ -36,4 +36,11 @@ using [flamegraph](https://github.com/flamegraph-rs/flamegraph) for cpu profilin
 something I've seen people on reddit do to analyse performance issues. After running 
 it I got this flamegraph
 
-[!bench.svg] 
+![Flamegraph](bench.svg) 
+
+Looking at this we can see that most of our time is spent in the make_move method, 
+and furthermore most of that time is spent cloning boards. This is probably on [this line](https://github.com/TageDan/Chlang/blob/6b280c7d83fb85c042fa5aa506071c701b65f278/src/board.rs#L122) 
+where we save the current boardstate so that we can undo moves and iterate 
+through old positions for determining threefold repetition.
+
+
