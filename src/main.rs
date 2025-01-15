@@ -12,9 +12,41 @@ fn main() {
     Solved by adding a boolean flag to the get_pseudo_legal_king_moves method)
     */
     unsafe { backtrace_on_stack_overflow::enable() };
+
     let mut board = board::Board::default();
-    println!("\x1b[2J\x1b[H");
-    println!("{}", board);
+
+    let mut a = std::env::args();
+    a.next();
+    if let Some(path) = a.next() {
+        let moves = std::fs::read_to_string(path).unwrap();
+        let moves = moves.split("\n");
+        for m in moves {
+            if m.is_empty() {
+                continue;
+            }
+            let cmove: Move = m.parse().unwrap();
+            let res = board.make_move(&cmove.clone());
+            if res.is_err() {
+                println!("error making move: {:?}", res);
+            }
+        }
+        println!("\x1b[2J\x1b[H");
+        println!("{}", board);
+        match board.get_game_state() {
+            board::GameState::Draw => {
+                println!("DRAW");
+            }
+            board::GameState::Win(board::Player::White) => {
+                println!("White Wins");
+            }
+            board::GameState::Win(board::Player::Black) => {
+                println!("Black Wins");
+            }
+            _ => (),
+        }
+        panic!("done");
+    }
+
     let mut stdin = std::io::BufReader::new(std::io::stdin());
     loop {
         let mut input = String::new();

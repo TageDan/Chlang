@@ -112,7 +112,7 @@ impl Board {
         }
         let piece = self.piece_type(&from).ok_or("No piece")?;
         let pseudo_legal_moves = self.get_pseudo_legal_moves_from_pos(&from);
-        if !pseudo_legal_moves.contains(&cmove.without_promotion()) {
+        if !pseudo_legal_moves.contains(&cmove) {
             return Err("Not legal move");
         }
         let from = from.bitboard();
@@ -673,7 +673,17 @@ impl Board {
                 {
                     moves.push(Move::new(pos, &take_left));
                 }
-                moves
+                let mut promotions = Vec::new();
+                for m in moves.iter() {
+                    let to = m.to();
+                    if to.row == 7 {
+                        let from = m.from();
+                        for piece in [Piece::Knight, Piece::Rook, Piece::Bishop, Piece::Queen] {
+                            promotions.push(Move::promotion(&from, &to, piece));
+                        }
+                    }
+                }
+                return [promotions, moves].concat();
             }
             Player::Black => {
                 let mut moves = Vec::with_capacity(4);
@@ -709,7 +719,17 @@ impl Board {
                     moves.push(Move::new(pos, &take_left));
                 }
 
-                moves
+                let mut promotions = Vec::new();
+                for m in moves.iter() {
+                    let to = m.to();
+                    if to.row == 0 {
+                        let from = m.from();
+                        for piece in [Piece::Knight, Piece::Rook, Piece::Bishop, Piece::Queen] {
+                            promotions.push(Move::promotion(&from, &to, piece));
+                        }
+                    }
+                }
+                return [promotions, moves].concat();
             }
         }
     }
@@ -728,7 +748,7 @@ impl Board {
                     if self.attacked_by_color(
                         &Position::from(
                             self.piece_bitboards[Piece::King.bitboard_index()]
-                                | self.white_piece_bitboard,
+                                & self.white_piece_bitboard,
                         ),
                         &Player::Black,
                     ) {
@@ -737,12 +757,13 @@ impl Board {
                     return GameState::Draw;
                 }
             }
+
             Player::Black => {
                 if self.get_valid_moves().is_empty() {
                     if self.attacked_by_color(
                         &Position::from(
                             self.piece_bitboards[Piece::King.bitboard_index()]
-                                | self.black_piece_bitboard,
+                                & self.black_piece_bitboard,
                         ),
                         &Player::White,
                     ) {
@@ -773,35 +794,19 @@ impl Board {
                         return true;
                     }
                 }
-                for cmove in [
-                    self.get_pseudo_legal_rook_moves_from_pos(&pos, &Player::White),
-                    self.get_pseudo_legal_bishop_moves_from_pos(&pos, &Player::White),
-                ]
-                .concat()
-                {
-                    if self
-                        .piece_type(&cmove.to())
-                        .is_some_and(|x| x.0 == Player::Black && x.1 == Piece::Queen)
-                    {
-                        // attacked by queen
-                        return true;
-                    }
-                }
                 for cmove in self.get_pseudo_legal_bishop_moves_from_pos(&pos, &Player::White) {
-                    if self
-                        .piece_type(&cmove.to())
-                        .is_some_and(|x| x.0 == Player::Black && x.1 == Piece::Bishop)
-                    {
-                        // attacked by bishop
+                    if self.piece_type(&cmove.to()).is_some_and(|x| {
+                        x.0 == Player::Black && (x.1 == Piece::Bishop || x.1 == Piece::Queen)
+                    }) {
+                        // attacked by bishop or queen
                         return true;
                     }
                 }
                 for cmove in self.get_pseudo_legal_rook_moves_from_pos(&pos, &Player::White) {
-                    if self
-                        .piece_type(&cmove.to())
-                        .is_some_and(|x| x.0 == Player::Black && x.1 == Piece::Rook)
-                    {
-                        // attacked by Rook
+                    if self.piece_type(&cmove.to()).is_some_and(|x| {
+                        x.0 == Player::Black && (x.1 == Piece::Rook || x.1 == Piece::Queen)
+                    }) {
+                        // attacked by Rook or queen
                         return true;
                     }
                 }
@@ -839,35 +844,19 @@ impl Board {
                         return true;
                     }
                 }
-                for cmove in [
-                    self.get_pseudo_legal_rook_moves_from_pos(&pos, &Player::Black),
-                    self.get_pseudo_legal_bishop_moves_from_pos(&pos, &Player::Black),
-                ]
-                .concat()
-                {
-                    if self
-                        .piece_type(&cmove.to())
-                        .is_some_and(|x| x.0 == Player::White && x.1 == Piece::Queen)
-                    {
-                        // attacked by queen
-                        return true;
-                    }
-                }
                 for cmove in self.get_pseudo_legal_bishop_moves_from_pos(&pos, &Player::Black) {
-                    if self
-                        .piece_type(&cmove.to())
-                        .is_some_and(|x| x.0 == Player::White && x.1 == Piece::Bishop)
-                    {
-                        // attacked by bishop
+                    if self.piece_type(&cmove.to()).is_some_and(|x| {
+                        x.0 == Player::White && (x.1 == Piece::Bishop || x.1 == Piece::Queen)
+                    }) {
+                        // attacked by bishop or queen
                         return true;
                     }
                 }
                 for cmove in self.get_pseudo_legal_rook_moves_from_pos(&pos, &Player::Black) {
-                    if self
-                        .piece_type(&cmove.to())
-                        .is_some_and(|x| x.0 == Player::White && x.1 == Piece::Rook)
-                    {
-                        // attacked by Rook
+                    if self.piece_type(&cmove.to()).is_some_and(|x| {
+                        x.0 == Player::White && (x.1 == Piece::Rook || x.1 == Piece::Queen)
+                    }) {
+                        // attacked by Rook or queen
                         return true;
                     }
                 }
@@ -900,7 +889,6 @@ impl Board {
     fn is_fifty_move_rule(&self) -> bool {
         return self.moves_since_capture >= 100;
     }
-
     fn key(&self) -> KeyStruct {
         let p = self.piece_bitboards;
         KeyStruct {
