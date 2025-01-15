@@ -36,4 +36,4 @@ using [flamegraph](https://github.com/flamegraph-rs/flamegraph) for cpu profilin
 something I've seen people on reddit do to analyse performance issues. After running 
 it I got this flamegraph
 
-[!bench.svg] 
+![Flamegraph](bench.svg) 
