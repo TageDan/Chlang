@@ -28,3 +28,12 @@ I also wan't to be able to decompile the bytecode into the higher level language
 - [ ] Interface
   - [ ] over ssh
   - [ ] website
+
+## Problem Notebook
+### 15/1 
+When finishing the headless chess game I noticed it was REALLY slow. I tried out 
+using [flamegraph](https://github.com/flamegraph-rs/flamegraph) for cpu profiling, 
+something I've seen people on reddit do to analyse performance issues. After running 
+it I got this flamegraph
+
+[!bench.svg] 
