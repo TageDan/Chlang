@@ -44,7 +44,7 @@ fn main() {
             }
             _ => (),
         }
-        panic!("done");
+        std::process::exit(0);
     }
 
     let mut stdin = std::io::BufReader::new(std::io::stdin());
