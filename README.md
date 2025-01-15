@@ -10,16 +10,18 @@ I also wan't to be able to decompile the bytecode into the higher level language
 
 ## Tasks
 - [ ] Chess game
-  - [ ] board representation
-  - [ ] move generation
-  - [ ] finished headless chess game
+  - [x] board representation
+  - [x] move generation
+  - [x] finished headless chess game
   - [ ] ui
+    - [x] terminal
+    - [ ] gui
 - [ ] Chess Engine
   - [ ] tree search
   - [ ] basic (hardcoded) eval
   - [ ] pruning
 - [ ] Chlang-language
-  - [ ] bytecode interpreter for piece-values, weight's for attacks, positioning of pieces, possible checks, etc.
+  - [ ] bytecode interpreter for piece-values, weight's for attacks, positioning of pieces, checks, pins, skewers etc.
   - [ ] possible byte-code feature extensions 
   - [ ] high-level language compiler
   - [ ] decompiler

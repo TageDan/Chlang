@@ -31,9 +31,23 @@ fn main() {
                     println!("error making move: {:?}", res);
                 }
             }
-            println!("{cmove:?}");
         }
 
         println!("{}", board);
+        match board.get_game_state() {
+            board::GameState::Draw => {
+                println!("DRAW");
+                break;
+            }
+            board::GameState::Win(board::Player::White) => {
+                println!("White Wins");
+                break;
+            }
+            board::GameState::Win(board::Player::Black) => {
+                println!("Black Wins");
+                break;
+            }
+            _ => (),
+        }
     }
 }

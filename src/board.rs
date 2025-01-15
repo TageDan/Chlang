@@ -1,5 +1,6 @@
 use crate::{cmove::Move, piece::Piece};
 use std::{
+    collections::HashMap,
     fmt::Display,
     io::{self, Stdin},
     str::FromStr,
@@ -26,10 +27,9 @@ pub struct Board {
     pub black_piece_bitboard: u64,
     pub possible_en_passant: Option<Position>,
     pub previous_board_states: Vec<Board>,
-    pub state: GameState,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Position {
     pub col: i64,
     pub row: i64,
@@ -60,7 +60,7 @@ impl From<u64> for Position {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Hash)]
 pub enum Player {
     White,
     Black,
@@ -714,6 +714,47 @@ impl Board {
         }
     }
 
+    /// Returns the game state of this [`Board`].
+    /// doesn't actually mutate the inner value. Just does it in
+    /// intermiediate steps but then undo's thoose operations.
+    /// I know, I know, Bad practice, Maybe I'll fix it later.
+    pub fn get_game_state(&mut self) -> GameState {
+        if self.is_fifty_move_rule() || self.is_threefold_rep() {
+            return GameState::Draw;
+        }
+        match self.turn {
+            Player::White => {
+                if self.get_valid_moves().is_empty() {
+                    if self.attacked_by_color(
+                        &Position::from(
+                            self.piece_bitboards[Piece::King.bitboard_index()]
+                                | self.white_piece_bitboard,
+                        ),
+                        &Player::Black,
+                    ) {
+                        return GameState::Win(Player::Black);
+                    };
+                    return GameState::Draw;
+                }
+            }
+            Player::Black => {
+                if self.get_valid_moves().is_empty() {
+                    if self.attacked_by_color(
+                        &Position::from(
+                            self.piece_bitboards[Piece::King.bitboard_index()]
+                                | self.black_piece_bitboard,
+                        ),
+                        &Player::White,
+                    ) {
+                        return GameState::Win(Player::White);
+                    }
+                    return GameState::Draw;
+                }
+            }
+        }
+        GameState::Playing
+    }
+
     /// unmake the last move on the board
     pub fn unmake_last(&mut self) {
         *self = self.previous_board_states.pop().unwrap();
@@ -855,6 +896,78 @@ impl Board {
             }
         }
     }
+
+    fn is_fifty_move_rule(&self) -> bool {
+        return self.moves_since_capture >= 100;
+    }
+
+    fn key(&self) -> KeyStruct {
+        let p = self.piece_bitboards;
+        KeyStruct {
+            turn: self.turn.clone(),
+            bitboards: [
+                p[0],
+                p[1],
+                p[2],
+                p[3],
+                p[4],
+                p[5],
+                self.white_piece_bitboard,
+                self.black_piece_bitboard,
+            ],
+            castle_rights: [
+                self.can_castle_short[0],
+                self.can_castle_short[1],
+                self.can_castle_long[0],
+                self.can_castle_long[1],
+            ],
+            possible_en_passant: self.possible_en_passant.clone(),
+        }
+    }
+
+    fn is_threefold_rep(&self) -> bool {
+        let mut counts = HashMap::new();
+        let mut piece_count = 0;
+        for x in self.previous_board_states.iter().rev() {
+            if (x.white_piece_bitboard | x.black_piece_bitboard).count_ones() != piece_count {
+                piece_count = (x.white_piece_bitboard | x.black_piece_bitboard).count_ones();
+                counts = HashMap::from([(x.key(), 1)]);
+            } else {
+                let count = counts.entry(x.key()).or_insert(0);
+                *count += 1;
+                if *count == 3 {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
+    fn get_valid_moves(&mut self) -> Vec<Move> {
+        let turn_bitboard = match self.turn {
+            Player::White => self.white_piece_bitboard,
+            Player::Black => self.black_piece_bitboard,
+        };
+        // There can only be 40 pieces maximum
+        let mut positions = Vec::with_capacity(40);
+        for i in 0..64_u32 {
+            let pos_bitboard = 2_u64.pow(i);
+            if pos_bitboard & turn_bitboard != 0 {
+                positions.push(Position::from(pos_bitboard & turn_bitboard));
+            }
+        }
+        // Each piece can at most go to 56 squares (queens)
+        let mut moves = Vec::with_capacity(positions.len() * 56);
+        for pos in &positions {
+            for cmove in self.get_pseudo_legal_moves_from_pos(pos) {
+                if self.make_move(&cmove).is_ok() {
+                    self.unmake_last();
+                    moves.push(cmove);
+                }
+            }
+        }
+        moves
+    }
 }
 
 impl Default for Board {
@@ -875,13 +988,21 @@ impl Default for Board {
             ],
             white_piece_bitboard: 0xffff,
             black_piece_bitboard: 0xffff000000000000,
-            state: GameState::Playing,
             possible_en_passant: None,
             previous_board_states: vec![],
         };
         starting.previous_board_states.push(starting.clone());
         starting
     }
+}
+
+// Struct used as a key_representing a board_state
+#[derive(Hash, PartialEq, Eq)]
+struct KeyStruct {
+    turn: Player,
+    bitboards: [u64; 8],
+    castle_rights: [bool; 4],
+    possible_en_passant: Option<Position>,
 }
 
 impl Display for Board {
