@@ -7,7 +7,9 @@ edition = "2021"
 debug = true
 
 [dependencies]
-backtrace-on-stack-overflow = "0.3.0"
+# backtrace-on-stack-overflow = "0.3.0"
+pix-engine = {version = "0.8.0", optional = true }
 
 [features]
-gui = []
+default = ["gui"]
+gui = ["dep:pix-engine"]
