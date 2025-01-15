@@ -14,7 +14,7 @@ pub enum GameState {
 }
 
 /// Bitboard representation of a chess board
-#[derive(Clone, PartialEq)]
+#[derive(PartialEq)]
 pub struct Board {
     pub turn: Player,
     pub moves_since_capture: u8,
@@ -26,7 +26,7 @@ pub struct Board {
     pub white_piece_bitboard: u64,
     pub black_piece_bitboard: u64,
     pub possible_en_passant: Option<Position>,
-    pub previous_board_states: Vec<Board>,
+    pub previous_board_states: Vec<KeyStruct>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -119,7 +119,7 @@ impl Board {
         let mut new_long_castle_rights = true;
         let mut new_short_castle_rights = true;
         let mut capture = false;
-        let old_board_state = self.clone();
+        let old_board_state = self.key();
         match self.turn {
             Player::White => {
                 new_short_castle_rights = self.can_castle_short[Player::White.idx()];
@@ -778,7 +778,25 @@ impl Board {
 
     /// unmake the last move on the board
     pub fn unmake_last(&mut self) {
-        *self = self.previous_board_states.pop().unwrap();
+        let KeyStruct {
+            turn,
+            piece_bitboards,
+            white_piece_bitboard,
+            black_piece_bitboard,
+            castle_short,
+            castle_long,
+            possible_en_passant,
+        } = self
+            .previous_board_states
+            .pop()
+            .expect("Tried to undo initial state");
+        self.turn = turn;
+        self.piece_bitboards = piece_bitboards;
+        self.white_piece_bitboard = white_piece_bitboard;
+        self.black_piece_bitboard = black_piece_bitboard;
+        self.can_castle_short = castle_short;
+        self.can_castle_long = castle_long;
+        self.possible_en_passant = possible_en_passant;
     }
 
     pub fn attacked_by_color(&self, pos: &Position, color: &Player) -> bool {
@@ -890,25 +908,13 @@ impl Board {
         return self.moves_since_capture >= 100;
     }
     fn key(&self) -> KeyStruct {
-        let p = self.piece_bitboards;
         KeyStruct {
             turn: self.turn.clone(),
-            bitboards: [
-                p[0],
-                p[1],
-                p[2],
-                p[3],
-                p[4],
-                p[5],
-                self.white_piece_bitboard,
-                self.black_piece_bitboard,
-            ],
-            castle_rights: [
-                self.can_castle_short[0],
-                self.can_castle_short[1],
-                self.can_castle_long[0],
-                self.can_castle_long[1],
-            ],
+            piece_bitboards: self.piece_bitboards,
+            white_piece_bitboard: self.white_piece_bitboard,
+            black_piece_bitboard: self.black_piece_bitboard,
+            castle_short: self.can_castle_short,
+            castle_long: self.can_castle_long,
             possible_en_passant: self.possible_en_passant.clone(),
         }
     }
@@ -919,9 +925,9 @@ impl Board {
         for x in self.previous_board_states.iter().rev() {
             if (x.white_piece_bitboard | x.black_piece_bitboard).count_ones() != piece_count {
                 piece_count = (x.white_piece_bitboard | x.black_piece_bitboard).count_ones();
-                counts = HashMap::from([(x.key(), 1)]);
+                counts = HashMap::from([(x, 1)]);
             } else {
-                let count = counts.entry(x.key()).or_insert(0);
+                let count = counts.entry(x).or_insert(0);
                 *count += 1;
                 if *count == 3 {
                     return true;
@@ -979,7 +985,6 @@ impl Default for Board {
             possible_en_passant: None,
             previous_board_states: vec![],
         };
-        starting.previous_board_states.push(starting.clone());
         starting
     }
 }
@@ -988,8 +993,11 @@ impl Default for Board {
 #[derive(Hash, PartialEq, Eq)]
 struct KeyStruct {
     turn: Player,
-    bitboards: [u64; 8],
-    castle_rights: [bool; 4],
+    piece_bitboards: [u64; 6],
+    white_piece_bitboard: u64,
+    black_piece_bitboard: u64,
+    castle_short: [bool; 2],
+    castle_long: [bool; 2],
     possible_en_passant: Option<Position>,
 }
 
