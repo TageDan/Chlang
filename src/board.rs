@@ -26,7 +26,7 @@ pub struct Board {
     pub white_piece_bitboard: u64,
     pub black_piece_bitboard: u64,
     pub possible_en_passant: Option<Position>,
-    pub previous_board_states: Vec<KeyStruct>,
+    pub previous_board_states: Vec<(KeyStruct, u8)>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -316,7 +316,8 @@ impl Board {
             *piece_bitboard = *piece_bitboard | to;
         }
 
-        self.previous_board_states.push(old_board_state);
+        self.previous_board_states
+            .push((old_board_state, self.moves_since_capture));
 
         if !self.is_valid() {
             self.unmake_last();
@@ -778,15 +779,18 @@ impl Board {
 
     /// unmake the last move on the board
     pub fn unmake_last(&mut self) {
-        let KeyStruct {
-            turn,
-            piece_bitboards,
-            white_piece_bitboard,
-            black_piece_bitboard,
-            castle_short,
-            castle_long,
-            possible_en_passant,
-        } = self
+        let (
+            KeyStruct {
+                turn,
+                piece_bitboards,
+                white_piece_bitboard,
+                black_piece_bitboard,
+                castle_short,
+                castle_long,
+                possible_en_passant,
+            },
+            moves_since_capture,
+        ) = self
             .previous_board_states
             .pop()
             .expect("Tried to undo initial state");
@@ -797,6 +801,7 @@ impl Board {
         self.can_castle_short = castle_short;
         self.can_castle_long = castle_long;
         self.possible_en_passant = possible_en_passant;
+        self.moves_since_capture = moves_since_capture;
     }
 
     pub fn attacked_by_color(&self, pos: &Position, color: &Player) -> bool {
@@ -905,7 +910,10 @@ impl Board {
     }
 
     fn is_fifty_move_rule(&self) -> bool {
-        return self.moves_since_capture >= 100;
+        if self.moves_since_capture >= 100 {
+            return true;
+        }
+        return false;
     }
     fn key(&self) -> KeyStruct {
         KeyStruct {
@@ -922,7 +930,7 @@ impl Board {
     fn is_threefold_rep(&self) -> bool {
         let mut counts = HashMap::new();
         let mut piece_count = 0;
-        for x in self.previous_board_states.iter().rev() {
+        for (x, _) in self.previous_board_states.iter().rev() {
             if (x.white_piece_bitboard | x.black_piece_bitboard).count_ones() != piece_count {
                 piece_count = (x.white_piece_bitboard | x.black_piece_bitboard).count_ones();
                 counts = HashMap::from([(x, 1)]);
