@@ -9,16 +9,18 @@ I also wan't to create a way to interacte with the engines (web site or terminal
 I also wan't to be able to decompile the bytecode into the higher level language again. This will restrict the layout of byte code but it could make for some interesting insights into how engines evaluate positions.
 
 ## Tasks
-- [ ] Chess game
-  - [x] board representation
-  - [x] move generation
-  - [x] finished headless chess game
-  - [ ] ui
-    - [x] terminal
-    - [ ] gui
+- [X] Chess game
+  - [X] board representation
+  - [X] move generation
+  - [X] finished headless chess game
+  - [X] ui
+    - [X] terminal
+    - [X] gui
 - [ ] Chess Engine
-  - [ ] tree search
-  - [ ] basic (hardcoded) eval
+  - [X] tree search
+  - [X] basic (hardcoded) eval
+    - [ ] Evaluators
+      - [X] Material Only 
   - [ ] pruning
 - [ ] Chlang-language
   - [ ] bytecode interpreter for piece-values, weight's for attacks, positioning of pieces, checks, pins, skewers etc.
