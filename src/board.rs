@@ -946,7 +946,18 @@ impl Board {
         false
     }
 
-    fn get_valid_moves(&mut self) -> Vec<Move> {
+    pub fn get_valid_moves(&mut self) -> Vec<Move> {
+        let mut moves = Vec::with_capacity(40 * 56);
+        for cmove in self.get_pseudo_legal_moves() {
+            if self.make_move(&cmove).is_ok() {
+                self.unmake_last();
+                moves.push(cmove);
+            }
+        }
+        moves
+    }
+
+    pub fn get_pseudo_legal_moves(&self) -> Vec<Move> {
         let turn_bitboard = match self.turn {
             Player::White => self.white_piece_bitboard,
             Player::Black => self.black_piece_bitboard,
@@ -963,10 +974,7 @@ impl Board {
         let mut moves = Vec::with_capacity(positions.len() * 56);
         for pos in &positions {
             for cmove in self.get_pseudo_legal_moves_from_pos(pos) {
-                if self.make_move(&cmove).is_ok() {
-                    self.unmake_last();
-                    moves.push(cmove);
-                }
+                moves.push(cmove);
             }
         }
         moves
