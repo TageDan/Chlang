@@ -358,12 +358,12 @@ impl Board {
             None
         };
         match self.turn {
-            Player::White => {
-                self.can_castle_short[Player::Black.idx()] = new_short_castle_rights;
-                self.can_castle_long[Player::White.idx()] = new_long_castle_rights;
-            }
             Player::Black => {
                 self.can_castle_short[Player::White.idx()] = new_short_castle_rights;
+                self.can_castle_long[Player::White.idx()] = new_long_castle_rights;
+            }
+            Player::White => {
+                self.can_castle_short[Player::Black.idx()] = new_short_castle_rights;
                 self.can_castle_long[Player::Black.idx()] = new_long_castle_rights;
             }
         }
