@@ -44,7 +44,7 @@ where we save the current boardstate so that we can undo moves and iterate
 through old positions for determining threefold repetition. Making some minor changes as 
 to how old boards are stored we can get rid of that clone. And sure enough, by using [hyperfine](https://github.com/sharkdp/hyperfine) 
 (a terminal benchmarking tool) on `test_game3` we see that our time goes from an 
-average of 456.5 ms ± 14.1 ms to _1.1ms ± 0.2ms_! That's a 456x speedup (if it scales linearly). 
+average of 456.5 ms ± 14.1 ms to _1.1ms ± 0.2ms_! That's a 450x speedup (if it scales linearly). 
 Before, running `test_game` would cuase wsl to crash for me and now it too runs in 1.1ms on average.
 
 
