@@ -7,7 +7,7 @@ use std::{
     str::FromStr,
 };
 
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Debug)]
 pub enum GameState {
     Playing,
     Win(Player),

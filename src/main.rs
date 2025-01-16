@@ -13,30 +13,35 @@ pub mod evaluators;
 pub mod piece;
 pub mod tree_evaluator;
 
-enum User<T: Eval> {
+enum User {
     Human,
-    Bot(tree_evaluator::Bot<T>),
+    Bot(tree_evaluator::Bot),
 }
 
 #[cfg(feature = "gui")]
-struct Game<WP: Eval, BP: Eval> {
+struct Game {
     board: board::Board,
     selected: Option<Position>,
     state: GameState,
     white_piece_images: [Image; 6],
     black_piece_images: [Image; 6],
-    black_player: User<WP>,
-    white_player: User<BP>,
+    black_player: User,
+    white_player: User,
     promotion: Option<Position>,
 }
 
 #[cfg(feature = "gui")]
-impl<WP: Eval, BP: Eval> PixEngine for Game<WP, BP> {
+impl PixEngine for Game {
     fn on_update(&mut self, s: &mut PixState) -> PixResult<()> {
         s.image_mode(ImageMode::Center);
         s.font_size(25)?;
         s.rect_mode(RectMode::Center);
         s.blend_mode(BlendMode::Blend);
+
+        match self.state {
+            GameState::Playing => (),
+            _ => return self.draw(s),
+        }
 
         // If current player is bot then let it play
         match self.board.turn {
@@ -152,7 +157,8 @@ impl<WP: Eval, BP: Eval> PixEngine for Game<WP, BP> {
     }
 }
 
-impl<WP: Eval, BP: Eval> Game<WP, BP> {
+#[cfg(feature = "gui")]
+impl Game {
     fn draw(&self, s: &mut PixState) -> PixResult<()> {
         // draw board
         for p in 0..64 {
@@ -231,25 +237,25 @@ impl<WP: Eval, BP: Eval> Game<WP, BP> {
         match self.state {
             GameState::Playing => (),
             GameState::Win(board::Player::White) => {
-                s.fill(Color::BLACK);
+                s.fill(Color::rgba(0, 0, 0, 100));
                 s.circle(circle![s.center()?, 100])?;
-                s.fill(Color::WHITE);
+                s.fill(Color::rgba(255, 255, 255, 150));
                 s.set_cursor_pos(s.center()?);
                 s.text("White Wins")?;
                 return Ok(());
             }
             GameState::Win(board::Player::Black) => {
-                s.fill(Color::BLACK);
+                s.fill(Color::rgba(0, 0, 0, 100));
                 s.circle(circle![s.center()?, 150])?;
-                s.fill(Color::WHITE);
+                s.fill(Color::rgba(255, 255, 255, 150));
                 s.set_cursor_pos(s.center()?);
                 s.text("Black Wins")?;
                 return Ok(());
             }
             GameState::Draw => {
-                s.fill(Color::BLACK);
+                s.fill(Color::rgba(0, 0, 0, 100));
                 s.circle(circle![s.center()?, 100])?;
-                s.fill(Color::WHITE);
+                s.fill(Color::rgba(255, 255, 255, 150));
                 s.set_cursor_pos(s.center()?);
                 s.text("Draw")?;
                 return Ok(());
@@ -260,7 +266,8 @@ impl<WP: Eval, BP: Eval> Game<WP, BP> {
     }
 }
 
-impl<WP: Eval, BP: Eval> Default for Game<WP, BP> {
+#[cfg(feature = "gui")]
+impl Default for Game {
     fn default() -> Self {
         Self {
             board: board::Board::default(),
@@ -308,7 +315,7 @@ fn main() -> PixResult<()> {
                     .expect("Please insert search depth for MATERIAL bot")
                     .parse::<u8>()
                     .expect("Invalid search depth: must be a valid u8"),
-                evaluator: evaluators::material_evaluator::MaterialEvaluator::default(),
+                evaluator: Box::new(evaluators::material_evaluator::MaterialEvaluator::default()),
             }),
             err => panic!("Unvalid bot: {err}"),
         }
@@ -325,7 +332,7 @@ fn main() -> PixResult<()> {
                     .expect("Please insert search depth for MATERIAL bot")
                     .parse::<u8>()
                     .expect("Invalid search depth: must be a valid u8"),
-                evaluator: evaluators::material_evaluator::MaterialEvaluator::default(),
+                evaluator: Box::new(evaluators::material_evaluator::MaterialEvaluator::default()),
             }),
             err => panic!("Unvalid bot: {err}"),
         }
@@ -355,64 +362,107 @@ fn main() {
 
     let mut a = std::env::args();
     a.next();
-    if let Some(path) = a.next() {
-        let moves = std::fs::read_to_string(path).unwrap();
-        let moves = moves.split("\n");
-        for m in moves {
-            if m.is_empty() {
-                continue;
+
+    let white_player = {
+        if let Some(s) = a.next() {
+            match s.as_str() {
+                "HUMAN" => User::Human,
+                "MATERIAL" => User::Bot(tree_evaluator::Bot {
+                    evaluator: Box::new(
+                        evaluators::material_evaluator::MaterialEvaluator::default(),
+                    ),
+                    search_depth: a
+                        .next()
+                        .expect("Please insert search depth for MATERIAL bot")
+                        .parse::<u8>()
+                        .expect("Invalid search depth: must be a valid u8"),
+                }),
+                "RANDOM" => User::Bot(tree_evaluator::Bot {
+                    evaluator: Box::new(evaluators::NoneEvaluator),
+                    search_depth: 1,
+                }),
+                _ => panic!("Invalid evaluator"),
             }
-            let cmove: Move = m.parse().unwrap();
-            let res = board.make_move(&cmove.clone());
-            if res.is_err() {
-                println!("error making move: {:?}", res);
-            }
-        }
-        println!("\x1b[2J\x1b[H");
-        if cfg!(not(feature = "gui")) {
-            println!("{}", board);
         } else {
-            board.display(&mut canvas);
+            User::Human
         }
-        match board.get_game_state() {
-            board::GameState::Draw => {
-                println!("DRAW");
+    };
+    let black_player = {
+        if let Some(s) = a.next() {
+            match s.as_str() {
+                "HUMAN" => User::Human,
+                "MATERIAL" => User::Bot(tree_evaluator::Bot {
+                    evaluator: Box::new(
+                        evaluators::material_evaluator::MaterialEvaluator::default(),
+                    ),
+                    search_depth: a
+                        .next()
+                        .expect("Please insert search depth for MATERIAL bot")
+                        .parse::<u8>()
+                        .expect("Invalid search depth: must be a valid u8"),
+                }),
+                "RANDOM" => User::Bot(tree_evaluator::Bot {
+                    evaluator: Box::new(evaluators::NoneEvaluator),
+                    search_depth: 1,
+                }),
+                _ => panic!("Invalid evaluator"),
             }
-            board::GameState::Win(board::Player::White) => {
-                println!("White Wins");
-            }
-            board::GameState::Win(board::Player::Black) => {
-                println!("Black Wins");
-            }
-            _ => (),
+        } else {
+            User::Human
         }
-        std::process::exit(0);
-    }
+    };
 
     let mut stdin = std::io::BufReader::new(std::io::stdin());
 
     loop {
-        let mut input = String::new();
-        stdin.read_line(&mut input);
-        println!("\x1b[2J\x1b[H");
-        if input.trim() == "u" {
-            board.unmake_last();
-        } else {
-            let cmove: Result<Move, &str> = input.parse();
+        match board.turn {
+            Player::White => match white_player {
+                User::Human => {
+                    let mut input = String::new();
+                    stdin.read_line(&mut input);
+                    if input.trim() == "u" {
+                        board.unmake_last();
+                    } else {
+                        let cmove: Result<Move, &str> = input.parse();
 
-            if cmove.is_ok() {
-                let res = board.make_move(&cmove.clone().unwrap());
-                if res.is_err() {
-                    println!("error making move: {:?}", res);
+                        if cmove.is_ok() {
+                            board.make_move(&cmove.clone().unwrap());
+                        }
+                    }
                 }
-            }
+                User::Bot(ref b) => {
+                    let cmove = b.find_best_move(&mut board);
+                    if let Some(m) = cmove {
+                        board.make_move(&m);
+                    }
+                }
+            },
+            Player::Black => match black_player {
+                User::Human => {
+                    let mut input = String::new();
+                    stdin.read_line(&mut input);
+                    if input.trim() == "u" {
+                        board.unmake_last();
+                    } else {
+                        let cmove: Result<Move, &str> = input.parse();
+
+                        if cmove.is_ok() {
+                            board.make_move(&cmove.clone().unwrap());
+                        }
+                    }
+                }
+                User::Bot(ref b) => {
+                    let cmove = b.find_best_move(&mut board);
+                    if let Some(m) = cmove {
+                        board.make_move(&m);
+                    }
+                }
+            },
         }
 
-        #[cfg(feature = "gui")]
-        board.display(&mut canvas);
-
-        #[cfg(not(feature = "gui"))]
+        println!("\x1b[2J\x1b[H");
         println!("{}", board);
+
         match board.get_game_state() {
             board::GameState::Draw => {
                 println!("DRAW");
