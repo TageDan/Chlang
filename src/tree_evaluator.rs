@@ -40,12 +40,11 @@ pub fn eval(board: &mut Board, depth: u8, evaluator: &Box<dyn Eval>, parent_best
     match board.turn {
         Player::White => {
             let mut best = isize::MIN;
-            for cmove in pseudo_legal_moves {
+            for (i, cmove) in pseudo_legal_moves.into_iter().enumerate() {
+                if i != 0 && best >= parent_best {
+                    return best;
+                }
                 if board.make_move(&cmove).is_ok() {
-                    if best >= parent_best {
-                        board.unmake_last();
-                        return best;
-                    }
                     best = best.max(eval(board, depth - 1, evaluator, best));
                     board.unmake_last();
                 }
@@ -54,12 +53,11 @@ pub fn eval(board: &mut Board, depth: u8, evaluator: &Box<dyn Eval>, parent_best
         }
         Player::Black => {
             let mut best = isize::MAX;
-            for cmove in pseudo_legal_moves {
+            for (i, cmove) in pseudo_legal_moves.into_iter().enumerate() {
+                if i != 0 && best >= parent_best {
+                    return best;
+                }
                 if board.make_move(&cmove).is_ok() {
-                    if best <= parent_best {
-                        board.unmake_last();
-                        return best;
-                    }
                     best = best.min(eval(board, depth - 1, evaluator, best));
                     board.unmake_last();
                 }
