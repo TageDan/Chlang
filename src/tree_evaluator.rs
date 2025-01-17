@@ -57,12 +57,16 @@ pub fn eval(
                 if board.make_move(&cmove).is_ok() {
                     if best >= parent_best {
                         board.unmake_last();
+                        let x = cache.entry(board.key()).or_insert((0, false));
+                        x.0 = best;
                         return best;
                     }
                     best = best.max(eval(board, depth - 1, evaluator, best, cache));
                     board.unmake_last();
                 }
             }
+            let x = cache.entry(board.key()).or_insert((0, true));
+            x.0 = best;
             return best;
         }
         Player::Black => {
@@ -78,12 +82,16 @@ pub fn eval(
                 if board.make_move(&cmove).is_ok() {
                     if best <= parent_best {
                         board.unmake_last();
+                        let x = cache.entry(board.key()).or_insert((0, false));
+                        x.0 = best;
                         return best;
                     }
                     best = best.min(eval(board, depth - 1, evaluator, best, cache));
                     board.unmake_last();
                 }
             }
+            let x = cache.entry(board.key()).or_insert((0, true));
+            x.0 = best;
             return best;
         }
     }
