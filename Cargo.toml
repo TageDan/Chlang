@@ -10,6 +10,7 @@ debug = true
 # backtrace-on-stack-overflow = "0.3.0"
 pix-engine = {version = "0.8.0", optional = true }
 rand = "0.8.5"
+rustc-hash = "2.1.0"
 
 [features]
 default = ["gui"]

@@ -1,11 +1,7 @@
 use crate::{cmove::Move, piece::Piece};
+use rustc_hash::FxHashMap;
 
-use std::{
-    collections::HashMap,
-    fmt::Display,
-    io::{self, Stdin},
-    str::FromStr,
-};
+use std::{collections, fmt::Display, str::FromStr};
 
 #[derive(PartialEq, Clone, Debug)]
 pub enum GameState {
@@ -929,12 +925,15 @@ impl Board {
     }
 
     fn is_threefold_rep(&self) -> bool {
-        let mut counts = HashMap::new();
+        let mut counts = FxHashMap::with_capacity_and_hasher(
+            self.previous_board_states.len(),
+            rustc_hash::FxBuildHasher::default(),
+        );
+
         let mut piece_count = 0;
         for (x, _) in self.previous_board_states.iter().rev() {
             if (x.white_piece_bitboard | x.black_piece_bitboard).count_ones() != piece_count {
-                piece_count = (x.white_piece_bitboard | x.black_piece_bitboard).count_ones();
-                counts = HashMap::from([(x, 1)]);
+                return false;
             } else {
                 let count = counts.entry(x).or_insert(0);
                 *count += 1;
