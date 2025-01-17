@@ -47,7 +47,7 @@ impl PixEngine for Game {
         match self.board.turn {
             Player::White => match self.white_player {
                 User::Human => (),
-                User::Bot(ref b) => {
+                User::Bot(ref mut b) => {
                     let cmove = b.find_best_move(&mut self.board);
                     if let Some(cmove) = cmove {
                         self.board
@@ -60,7 +60,7 @@ impl PixEngine for Game {
             },
             Player::Black => match self.black_player {
                 User::Human => (),
-                User::Bot(ref b) => {
+                User::Bot(ref mut b) => {
                     let cmove = b.find_best_move(&mut self.board);
                     if let Some(cmove) = cmove {
                         self.board
@@ -298,6 +298,8 @@ impl Default for Game {
 
 #[cfg(feature = "gui")]
 fn main() -> PixResult<()> {
+    use std::collections::HashMap;
+
     let mut engine = Engine::builder()
         .dimensions(500, 500)
         .title("chlang")
@@ -316,6 +318,7 @@ fn main() -> PixResult<()> {
                     .parse::<u8>()
                     .expect("Invalid search depth: must be a valid u8"),
                 evaluator: Box::new(evaluators::material_evaluator::MaterialEvaluator::default()),
+                cache: HashMap::new(),
             }),
             err => panic!("Unvalid bot: {err}"),
         }
@@ -333,6 +336,7 @@ fn main() -> PixResult<()> {
                     .parse::<u8>()
                     .expect("Invalid search depth: must be a valid u8"),
                 evaluator: Box::new(evaluators::material_evaluator::MaterialEvaluator::default()),
+                cache: HashMap::new(),
             }),
             err => panic!("Unvalid bot: {err}"),
         }
@@ -358,12 +362,14 @@ fn main() {
     */
     //unsafe { backtrace_on_stack_overflow::enable() };
 
+    use std::collections::HashMap;
+
     let mut board = board::Board::default();
 
     let mut a = std::env::args();
     a.next();
 
-    let white_player = {
+    let mut white_player = {
         if let Some(s) = a.next() {
             match s.as_str() {
                 "HUMAN" => User::Human,
@@ -376,10 +382,12 @@ fn main() {
                         .expect("Please insert search depth for MATERIAL bot")
                         .parse::<u8>()
                         .expect("Invalid search depth: must be a valid u8"),
+                    cache: HashMap::new(),
                 }),
                 "RANDOM" => User::Bot(tree_evaluator::Bot {
                     evaluator: Box::new(evaluators::NoneEvaluator),
                     search_depth: 1,
+                    cache: HashMap::new(),
                 }),
                 _ => panic!("Invalid evaluator"),
             }
@@ -387,7 +395,7 @@ fn main() {
             User::Human
         }
     };
-    let black_player = {
+    let mut black_player = {
         if let Some(s) = a.next() {
             match s.as_str() {
                 "HUMAN" => User::Human,
@@ -400,10 +408,12 @@ fn main() {
                         .expect("Please insert search depth for MATERIAL bot")
                         .parse::<u8>()
                         .expect("Invalid search depth: must be a valid u8"),
+                    cache: HashMap::new(),
                 }),
                 "RANDOM" => User::Bot(tree_evaluator::Bot {
                     evaluator: Box::new(evaluators::NoneEvaluator),
                     search_depth: 1,
+                    cache: HashMap::new(),
                 }),
                 _ => panic!("Invalid evaluator"),
             }
@@ -430,7 +440,7 @@ fn main() {
                         }
                     }
                 }
-                User::Bot(ref b) => {
+                User::Bot(ref mut b) => {
                     let cmove = b.find_best_move(&mut board);
                     if let Some(m) = cmove {
                         board.make_move(&m);
@@ -451,7 +461,7 @@ fn main() {
                         }
                     }
                 }
-                User::Bot(ref b) => {
+                User::Bot(ref mut b) => {
                     let cmove = b.find_best_move(&mut board);
                     if let Some(m) = cmove {
                         board.make_move(&m);

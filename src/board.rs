@@ -916,7 +916,7 @@ impl Board {
         }
         return false;
     }
-    fn key(&self) -> KeyStruct {
+    pub fn key(&self) -> KeyStruct {
         KeyStruct {
             turn: self.turn.clone(),
             piece_bitboards: self.piece_bitboards,
@@ -1007,7 +1007,7 @@ impl Default for Board {
 
 // Struct used as a key_representing a board_state
 #[derive(Hash, PartialEq, Eq)]
-struct KeyStruct {
+pub struct KeyStruct {
     turn: Player,
     piece_bitboards: [u64; 6],
     white_piece_bitboard: u64,
