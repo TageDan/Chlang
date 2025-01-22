@@ -1,7 +1,5 @@
 use std::borrow::Borrow;
 
-use rand::prelude::*;
-
 use crate::{
     board::{Board, GameState, Player},
     cmove::Move,
@@ -23,11 +21,7 @@ pub fn eval(board: &mut Board, depth: u8, evaluator: &Box<dyn Eval>, parent_best
         return evaluator.evaluate(board);
     }
 
-    let mut rng = rand::thread_rng();
-
     let mut pseudo_legal_moves = board.get_pseudo_legal_moves();
-
-    pseudo_legal_moves.shuffle(&mut rng);
 
     pseudo_legal_moves.sort_unstable_by_key(|cmove| {
         if board.piece_type(&cmove.to()).is_some() {
@@ -41,11 +35,12 @@ pub fn eval(board: &mut Board, depth: u8, evaluator: &Box<dyn Eval>, parent_best
         Player::White => {
             let mut best = isize::MIN;
             for (i, cmove) in pseudo_legal_moves.into_iter().enumerate() {
-                if i != 0 && best >= parent_best {
-                    return best;
-                }
                 if board.make_move(&cmove).is_ok() {
                     best = best.max(eval(board, depth - 1, evaluator, best));
+                    if best >= parent_best {
+                        board.unmake_last();
+                        return best;
+                    }
                     board.unmake_last();
                 }
             }
@@ -54,11 +49,12 @@ pub fn eval(board: &mut Board, depth: u8, evaluator: &Box<dyn Eval>, parent_best
         Player::Black => {
             let mut best = isize::MAX;
             for (i, cmove) in pseudo_legal_moves.into_iter().enumerate() {
-                if i != 0 && best >= parent_best {
-                    return best;
-                }
                 if board.make_move(&cmove).is_ok() {
                     best = best.min(eval(board, depth - 1, evaluator, best));
+                    if best <= parent_best {
+                        board.unmake_last();
+                        return best;
+                    }
                     board.unmake_last();
                 }
             }
@@ -74,11 +70,7 @@ pub struct Bot {
 
 impl Bot {
     pub fn find_best_move(&self, board: &mut Board) -> Option<Move> {
-        let mut rng = rand::thread_rng();
-
         let mut pseudo_legal_moves = board.get_pseudo_legal_moves();
-
-        pseudo_legal_moves.shuffle(&mut rng);
 
         pseudo_legal_moves.sort_unstable_by_key(|cmove| {
             if board.piece_type(&cmove.to()).is_some() {

@@ -639,7 +639,7 @@ impl Board {
     ) -> Vec<Move> {
         match color {
             Player::White => {
-                let mut moves = Vec::with_capacity(4);
+                let mut moves = Vec::with_capacity(8);
                 let one_forward = Position::new(pos.row + 1, pos.col);
                 let all_bitboard = self.white_piece_bitboard | self.black_piece_bitboard;
                 if one_forward.valid() && one_forward.bitboard() & (all_bitboard) == 0 {
@@ -671,20 +671,18 @@ impl Board {
                 {
                     moves.push(Move::new(pos, &take_left));
                 }
-                let mut promotions = Vec::new();
-                for m in moves.iter() {
+                for m in moves.iter_mut() {
                     let to = m.to();
                     if to.row == 7 {
-                        let from = m.from();
                         for piece in [Piece::Knight, Piece::Rook, Piece::Bishop, Piece::Queen] {
-                            promotions.push(Move::promotion(&from, &to, piece));
+                            *m = Move::promotion(&m.from(), &to, piece);
                         }
                     }
                 }
-                return [promotions, moves].concat();
+                return moves;
             }
             Player::Black => {
-                let mut moves = Vec::with_capacity(4);
+                let mut moves = Vec::with_capacity(8);
                 let one_forward = Position::new(pos.row - 1, pos.col);
                 let all_bitboard = self.white_piece_bitboard | self.black_piece_bitboard;
                 if one_forward.valid() && one_forward.bitboard() & (all_bitboard) == 0 {
@@ -717,17 +715,15 @@ impl Board {
                     moves.push(Move::new(pos, &take_left));
                 }
 
-                let mut promotions = Vec::new();
-                for m in moves.iter() {
+                for m in moves.iter_mut() {
                     let to = m.to();
                     if to.row == 0 {
-                        let from = m.from();
                         for piece in [Piece::Knight, Piece::Rook, Piece::Bishop, Piece::Queen] {
-                            promotions.push(Move::promotion(&from, &to, piece));
+                            *m = Move::promotion(&m.from(), &to, piece);
                         }
                     }
                 }
-                return [promotions, moves].concat();
+                return moves;
             }
         }
     }
@@ -804,16 +800,6 @@ impl Board {
     pub fn attacked_by_color(&self, pos: &Position, color: &Player) -> bool {
         match color {
             Player::Black => {
-                for cmove in self.get_pseudo_legal_king_moves_from_pos(&pos, &Player::White, false)
-                {
-                    if self
-                        .piece_type(&cmove.to())
-                        .is_some_and(|x| x.0 == Player::Black && x.1 == Piece::King)
-                    {
-                        // attacked by king
-                        return true;
-                    }
-                }
                 for cmove in self.get_pseudo_legal_bishop_moves_from_pos(&pos, &Player::White) {
                     if self.piece_type(&cmove.to()).is_some_and(|x| {
                         x.0 == Player::Black && (x.1 == Piece::Bishop || x.1 == Piece::Queen)
@@ -848,6 +834,16 @@ impl Board {
                         .is_some_and(|x| x.0 == Player::Black && x.1 == Piece::Pawn)
                     {
                         // attacked by pawn
+                        return true;
+                    }
+                }
+                for cmove in self.get_pseudo_legal_king_moves_from_pos(&pos, &Player::White, false)
+                {
+                    if self
+                        .piece_type(&cmove.to())
+                        .is_some_and(|x| x.0 == Player::Black && x.1 == Piece::King)
+                    {
+                        // attacked by king
                         return true;
                     }
                 }
@@ -930,7 +926,7 @@ impl Board {
             rustc_hash::FxBuildHasher::default(),
         );
 
-        let mut piece_count = 0;
+        let mut piece_count = (self.white_piece_bitboard | self.black_piece_bitboard).count_ones();
         for (x, _) in self.previous_board_states.iter().rev() {
             if (x.white_piece_bitboard | x.black_piece_bitboard).count_ones() != piece_count {
                 return false;
