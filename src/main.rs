@@ -43,6 +43,15 @@ impl PixEngine for Game {
             _ => return self.draw(s),
         }
 
+        if s.key_down(Key::Tab) {
+            println!(
+                "material eval: {}",
+                evaluators::material_evaluator::MaterialEvaluator::default()
+                    .evaluate(&mut self.board)
+            );
+            return self.draw(s);
+        }
+
         // If current player is bot then let it play
         match self.board.turn {
             Player::White => match self.white_player {
@@ -317,6 +326,20 @@ fn main() -> PixResult<()> {
                     .expect("Invalid search depth: must be a valid u8"),
                 evaluator: Box::new(evaluators::material_evaluator::MaterialEvaluator::default()),
             }),
+            "POSITIONAL" => User::Bot(tree_evaluator::Bot {
+                search_depth: args
+                    .next()
+                    .expect("Please insert search depth for MATERIAL bot")
+                    .parse::<u8>()
+                    .expect("Invalid search depth: must be a valid u8"),
+                evaluator: Box::new(
+                    evaluators::positional_evaluator::PositionalEvaluator::default(),
+                ),
+            }),
+            "RANDOM" => User::Bot(tree_evaluator::Bot {
+                evaluator: Box::new(evaluators::NoneEvaluator),
+                search_depth: 1,
+            }),
             err => panic!("Unvalid bot: {err}"),
         }
     } else {
@@ -333,6 +356,20 @@ fn main() -> PixResult<()> {
                     .parse::<u8>()
                     .expect("Invalid search depth: must be a valid u8"),
                 evaluator: Box::new(evaluators::material_evaluator::MaterialEvaluator::default()),
+            }),
+            "POSITIONAL" => User::Bot(tree_evaluator::Bot {
+                search_depth: args
+                    .next()
+                    .expect("Please insert search depth for MATERIAL bot")
+                    .parse::<u8>()
+                    .expect("Invalid search depth: must be a valid u8"),
+                evaluator: Box::new(
+                    evaluators::positional_evaluator::PositionalEvaluator::default(),
+                ),
+            }),
+            "RANDOM" => User::Bot(tree_evaluator::Bot {
+                evaluator: Box::new(evaluators::NoneEvaluator),
+                search_depth: 1,
             }),
             err => panic!("Unvalid bot: {err}"),
         }
@@ -377,6 +414,16 @@ fn main() {
                         .parse::<u8>()
                         .expect("Invalid search depth: must be a valid u8"),
                 }),
+                "POSITIONAL" => User::Bot(tree_evaluator::Bot {
+                    search_depth: args
+                        .next()
+                        .expect("Please insert search depth for MATERIAL bot")
+                        .parse::<u8>()
+                        .expect("Invalid search depth: must be a valid u8"),
+                    evaluator: Box::new(
+                        evaluators::positional_evaluator::PositionalEvaluator::default(),
+                    ),
+                }),
                 "RANDOM" => User::Bot(tree_evaluator::Bot {
                     evaluator: Box::new(evaluators::NoneEvaluator),
                     search_depth: 1,
@@ -400,6 +447,16 @@ fn main() {
                         .expect("Please insert search depth for MATERIAL bot")
                         .parse::<u8>()
                         .expect("Invalid search depth: must be a valid u8"),
+                }),
+                "POSITIONAL" => User::Bot(tree_evaluator::Bot {
+                    search_depth: args
+                        .next()
+                        .expect("Please insert search depth for MATERIAL bot")
+                        .parse::<u8>()
+                        .expect("Invalid search depth: must be a valid u8"),
+                    evaluator: Box::new(
+                        evaluators::positional_evaluator::PositionalEvaluator::default(),
+                    ),
                 }),
                 "RANDOM" => User::Bot(tree_evaluator::Bot {
                     evaluator: Box::new(evaluators::NoneEvaluator),
