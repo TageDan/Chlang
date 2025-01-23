@@ -104,6 +104,7 @@ pub struct Bot {
 
 impl Bot {
     pub fn find_best_move(&mut self, board: &mut Board) -> Option<Move> {
+
         let mut pseudo_legal_moves = board.get_pseudo_legal_moves();
 
         pseudo_legal_moves.sort_unstable_by_key(|cmove| {
