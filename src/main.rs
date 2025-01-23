@@ -1,6 +1,7 @@
 use board::{GameState, Player, Position};
 use cmove::Move;
 use piece::Piece;
+use rustc_hash::FxHashMap;
 use std::io::BufRead;
 use tree_evaluator::Eval;
 
@@ -43,20 +44,11 @@ impl PixEngine for Game {
             _ => return self.draw(s),
         }
 
-        if s.key_down(Key::Tab) {
-            println!(
-                "material eval: {}",
-                evaluators::material_evaluator::MaterialEvaluator::default()
-                    .evaluate(&mut self.board)
-            );
-            return self.draw(s);
-        }
-
         // If current player is bot then let it play
         match self.board.turn {
             Player::White => match self.white_player {
                 User::Human => (),
-                User::Bot(ref b) => {
+                User::Bot(ref mut b) => {
                     let cmove = b.find_best_move(&mut self.board);
                     if let Some(cmove) = cmove {
                         self.board
@@ -69,7 +61,7 @@ impl PixEngine for Game {
             },
             Player::Black => match self.black_player {
                 User::Human => (),
-                User::Bot(ref b) => {
+                User::Bot(ref mut b) => {
                     let cmove = b.find_best_move(&mut self.board);
                     if let Some(cmove) = cmove {
                         self.board
@@ -307,6 +299,8 @@ impl Default for Game {
 
 #[cfg(feature = "gui")]
 fn main() -> PixResult<()> {
+    use std::collections::HashMap;
+
     let mut engine = Engine::builder()
         .dimensions(500, 500)
         .title("chlang")
@@ -325,20 +319,18 @@ fn main() -> PixResult<()> {
                     .parse::<u8>()
                     .expect("Invalid search depth: must be a valid u8"),
                 evaluator: Box::new(evaluators::material_evaluator::MaterialEvaluator::default()),
+                cache: FxHashMap::default(),
             }),
             "POSITIONAL" => User::Bot(tree_evaluator::Bot {
+                evaluator: Box::new(
+                    evaluators::positional_evaluator::PositionalEvaluator::default(),
+                ),
                 search_depth: args
                     .next()
                     .expect("Please insert search depth for MATERIAL bot")
                     .parse::<u8>()
                     .expect("Invalid search depth: must be a valid u8"),
-                evaluator: Box::new(
-                    evaluators::positional_evaluator::PositionalEvaluator::default(),
-                ),
-            }),
-            "RANDOM" => User::Bot(tree_evaluator::Bot {
-                evaluator: Box::new(evaluators::NoneEvaluator),
-                search_depth: 1,
+                cache: FxHashMap::default(),
             }),
             err => panic!("Unvalid bot: {err}"),
         }
@@ -356,20 +348,18 @@ fn main() -> PixResult<()> {
                     .parse::<u8>()
                     .expect("Invalid search depth: must be a valid u8"),
                 evaluator: Box::new(evaluators::material_evaluator::MaterialEvaluator::default()),
+                cache: FxHashMap::default(),
             }),
             "POSITIONAL" => User::Bot(tree_evaluator::Bot {
+                evaluator: Box::new(
+                    evaluators::positional_evaluator::PositionalEvaluator::default(),
+                ),
                 search_depth: args
                     .next()
                     .expect("Please insert search depth for MATERIAL bot")
                     .parse::<u8>()
                     .expect("Invalid search depth: must be a valid u8"),
-                evaluator: Box::new(
-                    evaluators::positional_evaluator::PositionalEvaluator::default(),
-                ),
-            }),
-            "RANDOM" => User::Bot(tree_evaluator::Bot {
-                evaluator: Box::new(evaluators::NoneEvaluator),
-                search_depth: 1,
+                cache: FxHashMap::default(),
             }),
             err => panic!("Unvalid bot: {err}"),
         }
@@ -395,12 +385,14 @@ fn main() {
     */
     //unsafe { backtrace_on_stack_overflow::enable() };
 
+    use std::collections::HashMap;
+
     let mut board = board::Board::default();
 
     let mut a = std::env::args();
     a.next();
 
-    let white_player = {
+    let mut white_player = {
         if let Some(s) = a.next() {
             match s.as_str() {
                 "HUMAN" => User::Human,
@@ -413,20 +405,23 @@ fn main() {
                         .expect("Please insert search depth for MATERIAL bot")
                         .parse::<u8>()
                         .expect("Invalid search depth: must be a valid u8"),
+                    cache: FxHashMap::default(),
                 }),
                 "POSITIONAL" => User::Bot(tree_evaluator::Bot {
-                    search_depth: args
+                    evaluator: Box::new(
+                        evaluators::positional_evaluator::PositionalEvaluator::default(),
+                    ),
+                    search_depth: a
                         .next()
                         .expect("Please insert search depth for MATERIAL bot")
                         .parse::<u8>()
                         .expect("Invalid search depth: must be a valid u8"),
-                    evaluator: Box::new(
-                        evaluators::positional_evaluator::PositionalEvaluator::default(),
-                    ),
+                    cache: FxHashMap::default(),
                 }),
                 "RANDOM" => User::Bot(tree_evaluator::Bot {
                     evaluator: Box::new(evaluators::NoneEvaluator),
                     search_depth: 1,
+                    cache: FxHashMap::default(),
                 }),
                 _ => panic!("Invalid evaluator"),
             }
@@ -434,7 +429,7 @@ fn main() {
             User::Human
         }
     };
-    let black_player = {
+    let mut black_player = {
         if let Some(s) = a.next() {
             match s.as_str() {
                 "HUMAN" => User::Human,
@@ -447,21 +442,25 @@ fn main() {
                         .expect("Please insert search depth for MATERIAL bot")
                         .parse::<u8>()
                         .expect("Invalid search depth: must be a valid u8"),
+                    cache: FxHashMap::default(),
                 }),
                 "POSITIONAL" => User::Bot(tree_evaluator::Bot {
-                    search_depth: args
+                    evaluator: Box::new(
+                        evaluators::positional_evaluator::PositionalEvaluator::default(),
+                    ),
+                    search_depth: a
                         .next()
                         .expect("Please insert search depth for MATERIAL bot")
                         .parse::<u8>()
                         .expect("Invalid search depth: must be a valid u8"),
-                    evaluator: Box::new(
-                        evaluators::positional_evaluator::PositionalEvaluator::default(),
-                    ),
+                    cache: FxHashMap::default(),
                 }),
                 "RANDOM" => User::Bot(tree_evaluator::Bot {
                     evaluator: Box::new(evaluators::NoneEvaluator),
                     search_depth: 1,
+                    cache: FxHashMap::default(),
                 }),
+
                 _ => panic!("Invalid evaluator"),
             }
         } else {
@@ -487,7 +486,7 @@ fn main() {
                         }
                     }
                 }
-                User::Bot(ref b) => {
+                User::Bot(ref mut b) => {
                     let cmove = b.find_best_move(&mut board);
                     if let Some(m) = cmove {
                         board.make_move(&m);
@@ -508,7 +507,7 @@ fn main() {
                         }
                     }
                 }
-                User::Bot(ref b) => {
+                User::Bot(ref mut b) => {
                     let cmove = b.find_best_move(&mut board);
                     if let Some(m) = cmove {
                         board.make_move(&m);

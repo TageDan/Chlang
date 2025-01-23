@@ -1,7 +1,13 @@
-use crate::{cmove::Move, piece::Piece};
 use rustc_hash::FxHashMap;
 
-use std::{collections, fmt::Display, str::FromStr};
+use crate::{cmove::Move, piece::Piece};
+
+use std::{
+    collections::HashMap,
+    fmt::Display,
+    io::{self, Stdin},
+    str::FromStr,
+};
 
 #[derive(PartialEq, Clone, Debug)]
 pub enum GameState {
@@ -34,7 +40,7 @@ pub struct Position {
 
 impl Position {
     pub fn bitboard(&self) -> u64 {
-        1 << (self.row * 8 + self.col)
+        1 << (self.row * 8 + self.col) as u32
     }
     pub fn valid(&self) -> bool {
         self.col < 8 && self.row < 8 && self.col >= 0 && self.row >= 0
@@ -639,7 +645,7 @@ impl Board {
     ) -> Vec<Move> {
         match color {
             Player::White => {
-                let mut moves = Vec::with_capacity(8);
+                let mut moves = Vec::with_capacity(4);
                 let one_forward = Position::new(pos.row + 1, pos.col);
                 let all_bitboard = self.white_piece_bitboard | self.black_piece_bitboard;
                 if one_forward.valid() && one_forward.bitboard() & (all_bitboard) == 0 {
@@ -674,15 +680,16 @@ impl Board {
                 for m in moves.iter_mut() {
                     let to = m.to();
                     if to.row == 7 {
+                        let from = m.from();
                         for piece in [Piece::Knight, Piece::Rook, Piece::Bishop, Piece::Queen] {
-                            *m = Move::promotion(&m.from(), &to, piece);
+                            *m = Move::promotion(&from, &m.to(), piece);
                         }
                     }
                 }
                 return moves;
             }
             Player::Black => {
-                let mut moves = Vec::with_capacity(8);
+                let mut moves = Vec::with_capacity(4);
                 let one_forward = Position::new(pos.row - 1, pos.col);
                 let all_bitboard = self.white_piece_bitboard | self.black_piece_bitboard;
                 if one_forward.valid() && one_forward.bitboard() & (all_bitboard) == 0 {
@@ -718,8 +725,9 @@ impl Board {
                 for m in moves.iter_mut() {
                     let to = m.to();
                     if to.row == 0 {
+                        let from = m.from();
                         for piece in [Piece::Knight, Piece::Rook, Piece::Bishop, Piece::Queen] {
-                            *m = Move::promotion(&m.from(), &to, piece);
+                            *m = Move::promotion(&from, &m.to(), piece);
                         }
                     }
                 }
@@ -800,6 +808,16 @@ impl Board {
     pub fn attacked_by_color(&self, pos: &Position, color: &Player) -> bool {
         match color {
             Player::Black => {
+                for cmove in self.get_pseudo_legal_king_moves_from_pos(&pos, &Player::White, false)
+                {
+                    if self
+                        .piece_type(&cmove.to())
+                        .is_some_and(|x| x.0 == Player::Black && x.1 == Piece::King)
+                    {
+                        // attacked by king
+                        return true;
+                    }
+                }
                 for cmove in self.get_pseudo_legal_bishop_moves_from_pos(&pos, &Player::White) {
                     if self.piece_type(&cmove.to()).is_some_and(|x| {
                         x.0 == Player::Black && (x.1 == Piece::Bishop || x.1 == Piece::Queen)
@@ -834,16 +852,6 @@ impl Board {
                         .is_some_and(|x| x.0 == Player::Black && x.1 == Piece::Pawn)
                     {
                         // attacked by pawn
-                        return true;
-                    }
-                }
-                for cmove in self.get_pseudo_legal_king_moves_from_pos(&pos, &Player::White, false)
-                {
-                    if self
-                        .piece_type(&cmove.to())
-                        .is_some_and(|x| x.0 == Player::Black && x.1 == Piece::King)
-                    {
-                        // attacked by king
                         return true;
                     }
                 }
@@ -908,7 +916,7 @@ impl Board {
         }
         return false;
     }
-    fn key(&self) -> KeyStruct {
+    pub fn key(&self) -> KeyStruct {
         KeyStruct {
             turn: self.turn.clone(),
             piece_bitboards: self.piece_bitboards,
@@ -921,14 +929,11 @@ impl Board {
     }
 
     fn is_threefold_rep(&self) -> bool {
-        let mut counts = FxHashMap::with_capacity_and_hasher(
-            self.previous_board_states.len(),
-            rustc_hash::FxBuildHasher::default(),
-        );
-
+        let mut counts = FxHashMap::default();
         let mut piece_count = (self.white_piece_bitboard | self.black_piece_bitboard).count_ones();
         for (x, _) in self.previous_board_states.iter().rev() {
             if (x.white_piece_bitboard | x.black_piece_bitboard).count_ones() != piece_count {
+                piece_count = (x.white_piece_bitboard | x.black_piece_bitboard).count_ones();
                 return false;
             } else {
                 let count = counts.entry(x).or_insert(0);
@@ -1002,7 +1007,7 @@ impl Default for Board {
 
 // Struct used as a key_representing a board_state
 #[derive(Hash, PartialEq, Eq)]
-struct KeyStruct {
+pub struct KeyStruct {
     turn: Player,
     piece_bitboards: [u64; 6],
     white_piece_bitboard: u64,
