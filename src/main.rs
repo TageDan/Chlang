@@ -313,26 +313,46 @@ fn main() -> PixResult<()> {
         match s.as_str() {
             "HUMAN" => User::Human,
             "MATERIAL" => User::Bot(tree_evaluator::Bot {
-                search_depth: args
+                evaluator: Box::new(
+                    #[cfg(feature = "using_default")]
+                    evaluators::positional_evaluator::MaterialEvaluator::default(),
+                    #[cfg(not(feature = "using_default"))]
+                    evaluators::positional_evaluator::MaterialEvaluator::from(
+                        a.next()
+                            .expect("insert string representation of eval function"),
+                    ),
+                ),
+                search_depth: a
                     .next()
                     .expect("Please insert search depth for MATERIAL bot")
                     .parse::<u8>()
                     .expect("Invalid search depth: must be a valid u8"),
-                evaluator: Box::new(evaluators::material_evaluator::MaterialEvaluator::default()),
                 cache: FxHashMap::default(),
             }),
             "POSITIONAL" => User::Bot(tree_evaluator::Bot {
-                evaluator: Box::new(
-                    evaluators::positional_evaluator::PositionalEvaluator::default(),
-                ),
-                search_depth: args
+                search_depth: a
                     .next()
                     .expect("Please insert search depth for MATERIAL bot")
                     .parse::<u8>()
                     .expect("Invalid search depth: must be a valid u8"),
+                evaluator: Box::new(
+                    #[cfg(feature = "using_default")]
+                    evaluators::positional_evaluator::PositionalEvaluator::default(),
+                    #[cfg(not(feature = "using_default"))]
+                    evaluators::positional_evaluator::PositionalEvaluator::from(
+                        a.next()
+                            .expect("insert string representation on eval function"),
+                    ),
+                ),
                 cache: FxHashMap::default(),
             }),
-            err => panic!("Unvalid bot: {err}"),
+            "RANDOM" => User::Bot(tree_evaluator::Bot {
+                evaluator: Box::new(evaluators::NoneEvaluator),
+                search_depth: 1,
+                cache: FxHashMap::default(),
+            }),
+
+            _ => panic!("Invalid evaluator"),
         }
     } else {
         User::Human
@@ -342,26 +362,46 @@ fn main() -> PixResult<()> {
         match s.as_str() {
             "HUMAN" => User::Human,
             "MATERIAL" => User::Bot(tree_evaluator::Bot {
-                search_depth: args
+                evaluator: Box::new(
+                    #[cfg(feature = "using_default")]
+                    evaluators::positional_evaluator::MaterialEvaluator::default(),
+                    #[cfg(not(feature = "using_default"))]
+                    evaluators::positional_evaluator::MaterialEvaluator::from(
+                        a.next()
+                            .expect("insert string representation of eval function"),
+                    ),
+                ),
+                search_depth: a
                     .next()
                     .expect("Please insert search depth for MATERIAL bot")
                     .parse::<u8>()
                     .expect("Invalid search depth: must be a valid u8"),
-                evaluator: Box::new(evaluators::material_evaluator::MaterialEvaluator::default()),
                 cache: FxHashMap::default(),
             }),
             "POSITIONAL" => User::Bot(tree_evaluator::Bot {
-                evaluator: Box::new(
-                    evaluators::positional_evaluator::PositionalEvaluator::default(),
-                ),
-                search_depth: args
+                search_depth: a
                     .next()
                     .expect("Please insert search depth for MATERIAL bot")
                     .parse::<u8>()
                     .expect("Invalid search depth: must be a valid u8"),
+                evaluator: Box::new(
+                    #[cfg(feature = "using_default")]
+                    evaluators::positional_evaluator::PositionalEvaluator::default(),
+                    #[cfg(not(feature = "using_default"))]
+                    evaluators::positional_evaluator::PositionalEvaluator::from(
+                        a.next()
+                            .expect("insert string representation on eval function"),
+                    ),
+                ),
                 cache: FxHashMap::default(),
             }),
-            err => panic!("Unvalid bot: {err}"),
+            "RANDOM" => User::Bot(tree_evaluator::Bot {
+                evaluator: Box::new(evaluators::NoneEvaluator),
+                search_depth: 1,
+                cache: FxHashMap::default(),
+            }),
+
+            _ => panic!("Invalid evaluator"),
         }
     } else {
         User::Human
@@ -398,7 +438,14 @@ fn main() {
                 "HUMAN" => User::Human,
                 "MATERIAL" => User::Bot(tree_evaluator::Bot {
                     evaluator: Box::new(
+                        #[cfg(feature = "using_default")]
                         evaluators::material_evaluator::MaterialEvaluator::default(),
+                        #[cfg(not(feature = "using_default"))]
+                        evaluators::material_evaluator::MaterialEvaluator::from(
+                            a.next()
+                                .expect("insert string representation of eval function")
+                                .as_bytes(),
+                        ),
                     ),
                     search_depth: a
                         .next()
@@ -408,14 +455,21 @@ fn main() {
                     cache: FxHashMap::default(),
                 }),
                 "POSITIONAL" => User::Bot(tree_evaluator::Bot {
-                    evaluator: Box::new(
-                        evaluators::positional_evaluator::PositionalEvaluator::default(),
-                    ),
                     search_depth: a
                         .next()
                         .expect("Please insert search depth for MATERIAL bot")
                         .parse::<u8>()
                         .expect("Invalid search depth: must be a valid u8"),
+                    evaluator: Box::new(
+                        #[cfg(feature = "using_default")]
+                        evaluators::positional_evaluator::PositionalEvaluator::default(),
+                        #[cfg(not(feature = "using_default"))]
+                        evaluators::positional_evaluator::PositionalEvaluator::from(
+                            a.next()
+                                .expect("insert string representation on eval function")
+                                .as_bytes(),
+                        ),
+                    ),
                     cache: FxHashMap::default(),
                 }),
                 "RANDOM" => User::Bot(tree_evaluator::Bot {
@@ -423,19 +477,28 @@ fn main() {
                     search_depth: 1,
                     cache: FxHashMap::default(),
                 }),
+
                 _ => panic!("Invalid evaluator"),
             }
         } else {
             User::Human
         }
     };
+
     let mut black_player = {
         if let Some(s) = a.next() {
             match s.as_str() {
                 "HUMAN" => User::Human,
                 "MATERIAL" => User::Bot(tree_evaluator::Bot {
                     evaluator: Box::new(
+                        #[cfg(feature = "using_default")]
                         evaluators::material_evaluator::MaterialEvaluator::default(),
+                        #[cfg(not(feature = "using_default"))]
+                        evaluators::material_evaluator::MaterialEvaluator::from(
+                            a.next()
+                                .expect("insert string representation of eval function")
+                                .as_bytes(),
+                        ),
                     ),
                     search_depth: a
                         .next()
@@ -445,14 +508,21 @@ fn main() {
                     cache: FxHashMap::default(),
                 }),
                 "POSITIONAL" => User::Bot(tree_evaluator::Bot {
-                    evaluator: Box::new(
-                        evaluators::positional_evaluator::PositionalEvaluator::default(),
-                    ),
                     search_depth: a
                         .next()
                         .expect("Please insert search depth for MATERIAL bot")
                         .parse::<u8>()
                         .expect("Invalid search depth: must be a valid u8"),
+                    evaluator: Box::new(
+                        #[cfg(feature = "using_default")]
+                        evaluators::positional_evaluator::PositionalEvaluator::default(),
+                        #[cfg(not(feature = "using_default"))]
+                        evaluators::positional_evaluator::PositionalEvaluator::from(
+                            a.next()
+                                .expect("insert string representation on eval function")
+                                .as_bytes(),
+                        ),
+                    ),
                     cache: FxHashMap::default(),
                 }),
                 "RANDOM" => User::Bot(tree_evaluator::Bot {
@@ -516,20 +586,31 @@ fn main() {
             },
         }
 
+        #[cfg(not(feature = "compare"))]
         println!("\x1b[2J\x1b[H");
+        #[cfg(not(feature = "compare"))]
         println!("{}", board);
 
         match board.get_game_state() {
             board::GameState::Draw => {
+                #[cfg(not(feature = "compare"))]
                 println!("DRAW");
+                #[cfg(feature = "compare")]
+                println!("0");
                 break;
             }
             board::GameState::Win(board::Player::White) => {
+                #[cfg(not(feature = "compare"))]
                 println!("White Wins");
+                #[cfg(feature = "compare")]
+                println!("1");
                 break;
             }
             board::GameState::Win(board::Player::Black) => {
+                #[cfg(not(feature = "compare"))]
                 println!("Black Wins");
+                #[cfg(feature = "compare")]
+                println!("-1");
                 break;
             }
             _ => (),
