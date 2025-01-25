@@ -92,7 +92,7 @@ impl From<&[u8]> for PositionalEvaluator {
         let mut piece_positional_values = [[[0; 8]; 8]; 6];
         let mut current_type: isize = -1;
         for (i, b) in value[6..6 + 8 * 8 * 6].iter().enumerate() {
-            if i % 8 * 8 == 0 {
+            if i % (8 * 8) == 0 {
                 current_type += 1;
             }
             let j = i - current_type as usize * 8 * 8;
