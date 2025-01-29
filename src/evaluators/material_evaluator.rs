@@ -3,6 +3,8 @@ use std::{
     str::FromStr,
 };
 
+use base64::Engine;
+
 use crate::tree_evaluator::Eval;
 
 pub struct MaterialEvaluator {
@@ -34,12 +36,7 @@ impl FromStr for MaterialEvaluator {
 
 impl From<MaterialEvaluator> for String {
     fn from(value: MaterialEvaluator) -> Self {
-        value
-            .piece_values
-            .map(|b| char::from(b))
-            .as_slice()
-            .iter()
-            .collect()
+        crate::BASE64_STANDARD.encode(value.piece_values)
     }
 }
 

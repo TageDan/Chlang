@@ -1,12 +1,18 @@
-use board::{GameState, Player, Position};
+use base64::prelude::*;
+use board::Player;
+use board::{GameState, Position};
 use cmove::Move;
 use piece::Piece;
 use rustc_hash::FxHashMap;
 use std::io::BufRead;
-use tree_evaluator::Eval;
+
+use base64::Engine;
 
 #[cfg(feature = "gui")]
-use pix_engine::prelude::*;
+use pix_engine::prelude::{
+    circle, point, rect, square, BlendMode, Color, Engine as PEngine, Flipped, Image, ImageMode,
+    Mouse, PixEngine, PixError, PixResult, PixState, Point, RectMode,
+};
 
 mod board;
 pub mod cmove;
@@ -301,7 +307,7 @@ impl Default for Game {
 fn main() -> PixResult<()> {
     use std::collections::HashMap;
 
-    let mut engine = Engine::builder()
+    let mut engine = PEngine::builder()
         .dimensions(500, 500)
         .title("chlang")
         .show_frame_rate()
@@ -315,14 +321,19 @@ fn main() -> PixResult<()> {
             "MATERIAL" => User::Bot(tree_evaluator::Bot {
                 evaluator: Box::new(
                     #[cfg(feature = "using_default")]
-                    evaluators::positional_evaluator::MaterialEvaluator::default(),
+                    evaluators::material_evaluator::MaterialEvaluator::default(),
                     #[cfg(not(feature = "using_default"))]
-                    evaluators::positional_evaluator::MaterialEvaluator::from(
-                        a.next()
-                            .expect("insert string representation of eval function"),
+                    evaluators::material_evaluator::MaterialEvaluator::from(
+                        BASE64_STANDARD
+                            .decode(
+                                args.next()
+                                    .expect("insert base64 representation of eval function"),
+                            )
+                            .expect("invalid base64")
+                            .as_slice(),
                     ),
                 ),
-                search_depth: a
+                search_depth: args
                     .next()
                     .expect("Please insert search depth for MATERIAL bot")
                     .parse::<u8>()
@@ -330,7 +341,7 @@ fn main() -> PixResult<()> {
                 cache: FxHashMap::default(),
             }),
             "POSITIONAL" => User::Bot(tree_evaluator::Bot {
-                search_depth: a
+                search_depth: args
                     .next()
                     .expect("Please insert search depth for MATERIAL bot")
                     .parse::<u8>()
@@ -340,8 +351,13 @@ fn main() -> PixResult<()> {
                     evaluators::positional_evaluator::PositionalEvaluator::default(),
                     #[cfg(not(feature = "using_default"))]
                     evaluators::positional_evaluator::PositionalEvaluator::from(
-                        a.next()
-                            .expect("insert string representation on eval function"),
+                        BASE64_STANDARD
+                            .decode(
+                                args.next()
+                                    .expect("insert base64 representation of eval function"),
+                            )
+                            .expect("invalid base64")
+                            .as_slice(),
                     ),
                 ),
                 cache: FxHashMap::default(),
@@ -364,14 +380,19 @@ fn main() -> PixResult<()> {
             "MATERIAL" => User::Bot(tree_evaluator::Bot {
                 evaluator: Box::new(
                     #[cfg(feature = "using_default")]
-                    evaluators::positional_evaluator::MaterialEvaluator::default(),
+                    evaluators::material_evaluator::MaterialEvaluator::default(),
                     #[cfg(not(feature = "using_default"))]
-                    evaluators::positional_evaluator::MaterialEvaluator::from(
-                        a.next()
-                            .expect("insert string representation of eval function"),
+                    evaluators::material_evaluator::MaterialEvaluator::from(
+                        BASE64_STANDARD
+                            .decode(
+                                args.next()
+                                    .expect("insert base64 representation of eval function"),
+                            )
+                            .expect("invalid base64")
+                            .as_slice(),
                     ),
                 ),
-                search_depth: a
+                search_depth: args
                     .next()
                     .expect("Please insert search depth for MATERIAL bot")
                     .parse::<u8>()
@@ -379,7 +400,7 @@ fn main() -> PixResult<()> {
                 cache: FxHashMap::default(),
             }),
             "POSITIONAL" => User::Bot(tree_evaluator::Bot {
-                search_depth: a
+                search_depth: args
                     .next()
                     .expect("Please insert search depth for MATERIAL bot")
                     .parse::<u8>()
@@ -389,8 +410,13 @@ fn main() -> PixResult<()> {
                     evaluators::positional_evaluator::PositionalEvaluator::default(),
                     #[cfg(not(feature = "using_default"))]
                     evaluators::positional_evaluator::PositionalEvaluator::from(
-                        a.next()
-                            .expect("insert string representation on eval function"),
+                        BASE64_STANDARD
+                            .decode(
+                                args.next()
+                                    .expect("insert base64 representation of eval function"),
+                            )
+                            .expect("invalid base64")
+                            .as_slice(),
                     ),
                 ),
                 cache: FxHashMap::default(),
@@ -425,8 +451,6 @@ fn main() {
     */
     //unsafe { backtrace_on_stack_overflow::enable() };
 
-    use std::collections::HashMap;
-
     let mut board = board::Board::default();
 
     let mut a = std::env::args();
@@ -442,9 +466,13 @@ fn main() {
                         evaluators::material_evaluator::MaterialEvaluator::default(),
                         #[cfg(not(feature = "using_default"))]
                         evaluators::material_evaluator::MaterialEvaluator::from(
-                            a.next()
-                                .expect("insert string representation of eval function")
-                                .as_bytes(),
+                            BASE64_STANDARD
+                                .decode(
+                                    a.next()
+                                        .expect("insert base64 representation of eval function"),
+                                )
+                                .expect("invalid base64")
+                                .as_slice(),
                         ),
                     ),
                     search_depth: a
@@ -465,9 +493,13 @@ fn main() {
                         evaluators::positional_evaluator::PositionalEvaluator::default(),
                         #[cfg(not(feature = "using_default"))]
                         evaluators::positional_evaluator::PositionalEvaluator::from(
-                            a.next()
-                                .expect("insert string representation on eval function")
-                                .as_bytes(),
+                            BASE64_STANDARD
+                                .decode(
+                                    a.next()
+                                        .expect("insert base64 representation of eval function"),
+                                )
+                                .expect("invalid base64")
+                                .as_slice(),
                         ),
                     ),
                     cache: FxHashMap::default(),
@@ -495,9 +527,13 @@ fn main() {
                         evaluators::material_evaluator::MaterialEvaluator::default(),
                         #[cfg(not(feature = "using_default"))]
                         evaluators::material_evaluator::MaterialEvaluator::from(
-                            a.next()
-                                .expect("insert string representation of eval function")
-                                .as_bytes(),
+                            BASE64_STANDARD
+                                .decode(
+                                    a.next()
+                                        .expect("insert base64 representation of eval function"),
+                                )
+                                .expect("invalid base64")
+                                .as_slice(),
                         ),
                     ),
                     search_depth: a
@@ -518,9 +554,13 @@ fn main() {
                         evaluators::positional_evaluator::PositionalEvaluator::default(),
                         #[cfg(not(feature = "using_default"))]
                         evaluators::positional_evaluator::PositionalEvaluator::from(
-                            a.next()
-                                .expect("insert string representation on eval function")
-                                .as_bytes(),
+                            BASE64_STANDARD
+                                .decode(
+                                    a.next()
+                                        .expect("insert base64 representation of eval function"),
+                                )
+                                .expect("invalid base64")
+                                .as_slice(),
                         ),
                     ),
                     cache: FxHashMap::default(),

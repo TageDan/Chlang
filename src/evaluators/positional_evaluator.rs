@@ -3,6 +3,8 @@ use std::{
     str::FromStr,
 };
 
+use base64::Engine;
+
 use crate::tree_evaluator::Eval;
 
 pub struct PositionalEvaluator {
@@ -115,19 +117,16 @@ impl FromStr for PositionalEvaluator {
 
 impl From<PositionalEvaluator> for String {
     fn from(value: PositionalEvaluator) -> Self {
-        let mut st = String::new();
-        value
-            .piece_values
-            .iter()
-            .for_each(|x| st.push_str(&x.to_string()));
+        let mut bytes = Vec::new();
+        value.piece_values.iter().for_each(|x| bytes.push(*x));
         value.piece_positional_values.iter().for_each(|mat| {
             for row in mat {
                 for col in row {
-                    st.push_str(&col.to_string());
+                    bytes.push(*col);
                 }
             }
         });
-        st
+        crate::BASE64_STANDARD.encode(bytes)
     }
 }
 
