@@ -16,12 +16,13 @@ I also wan't to be able to decompile the bytecode into the higher level language
   - [X] ui
     - [X] terminal
     - [X] gui
-- [ ] Chess Engine
+- [X] Chess Engine
   - [X] tree search
   - [X] basic (hardcoded) eval
-    - [ ] Evaluators
+    - [X] Evaluators
       - [X] Material Only 
-  - [ ] pruning
+      - [X] Positional
+  - [X] pruning
 - [ ] Chlang-language
   - [ ] bytecode interpreter for piece-values, weight's for attacks, positioning of pieces, checks, pins, skewers etc.
   - [ ] possible byte-code feature extensions 
@@ -30,6 +31,59 @@ I also wan't to be able to decompile the bytecode into the higher level language
 - [ ] Interface
   - [ ] over ssh
   - [ ] website
+
+
+## Finished Evaluator specification
+The finished evaluator should be able to evaluate:
+- [X] Piece material
+- [X] Positioning of pieces
+- [ ] Attacks/defenders of pieces (maybe except en passant, since it's kinda ambigious how to implement)
+- [ ] Possibility of castle
+
+I also want it to be able to evaluate (though these might be harder to implement / could affect performance more):
+- [ ] Pins
+- [ ] Skewers
+- [ ] Forks
+
+Theese should be representable in bytes as follows:
+bytes(<values for pieces>, <value_for_pieces_for_square>, <value_for_piece_attacks>, <value_for_castle_long_short>)
+this should be 6+6*64+6+2 bytes.
+
+High level it could look like:
+```
+
+Extra:
+  LongCastle:
+    5
+  ShortCastle:
+    5
+  HasTurn:
+    1
+
+Pawn:
+  Base:
+    10
+  Position:
+    6 6 6 6 6 6 6 6
+    5 5 5 5 5 5 5 5
+    4 4 4 4 4 4 4 4
+    3 3 3 3 3 3 3 3
+    2 2 2 2 2 2 2 2
+    1 1 1 1 1 1 1 1
+    0 0 0 0 0 0 0 0
+    0 0 0 0 0 0 0 0
+  Attack:
+    10
+
+Knight:
+  Base:
+    30
+...
+...
+...
+and so on
+```
+
 
 ## Notebook
 
@@ -87,5 +141,6 @@ Yaaaay! Double the speed (for these benchmarks)
 I did another benchmark with a slight cache improvement but saw no effect. Honestly I don't even know if the cache makes any differens at the moment. It feels like a
 cache hit is too rare for the added overhead of searching the cache for every node. I should probably develop/find some method to test this further.
 
-
+### 9/2
+Today I decided to limit the range for coefficients to 0-128 (not including 128) becuase that is what normal ascii supports and I can't be bothered to do something about the rest.
 

@@ -1,3 +1,4 @@
+use core::slice::SlicePattern;
 use std::{
     io::{BufRead, Read},
     str::FromStr,
@@ -109,9 +110,16 @@ impl From<&[u8]> for PositionalEvaluator {
 }
 
 impl FromStr for PositionalEvaluator {
-    type Err = String;
+    type Err = &'static str;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(s.as_bytes().into())
+        Ok(s.chars()
+            .map(|x| match x.is_ascii() {
+                true => Ok(x as u8),
+                _ => return Err("should be valid ascii"),
+            })
+            .collect::<Result<Vec<_>, _>>()?
+            .as_slice()
+            .into())
     }
 }
 
@@ -126,7 +134,7 @@ impl From<PositionalEvaluator> for String {
                 }
             }
         });
-        crate::BASE64_STANDARD.encode(bytes)
+        String::from_utf8(bytes).unwrap()
     }
 }
 

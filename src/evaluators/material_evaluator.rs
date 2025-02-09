@@ -28,9 +28,16 @@ impl From<&[u8]> for MaterialEvaluator {
 }
 
 impl FromStr for MaterialEvaluator {
-    type Err = String;
+    type Err = &'static str;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(s.as_bytes().into())
+        Ok(s.chars()
+            .map(|x| match x.is_ascii() {
+                true => Ok(x as u8),
+                _ => return Err("should be valid ascii"),
+            })
+            .collect::<Result<Vec<_>, _>>()?
+            .as_slice()
+            .into())
     }
 }
 

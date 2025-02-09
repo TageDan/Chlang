@@ -1,12 +1,9 @@
-use base64::prelude::*;
 use board::Player;
 use board::{GameState, Position};
 use cmove::Move;
 use piece::Piece;
 use rustc_hash::FxHashMap;
 use std::io::BufRead;
-
-use base64::Engine;
 
 #[cfg(feature = "gui")]
 use pix_engine::prelude::{
@@ -443,13 +440,15 @@ fn main() -> PixResult<()> {
 }
 
 #[cfg(not(feature = "gui"))]
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     /*
     Only for development, shows a stacktrace on stack overflows
     (added since I accidentaly ifinitely called a recursive function.
     Solved by adding a boolean flag to the get_pseudo_legal_king_moves method)
     */
     //unsafe { backtrace_on_stack_overflow::enable() };
+
+    use std::str::FromStr;
 
     let mut board = board::Board::default();
 
@@ -465,15 +464,9 @@ fn main() {
                         #[cfg(feature = "using_default")]
                         evaluators::material_evaluator::MaterialEvaluator::default(),
                         #[cfg(not(feature = "using_default"))]
-                        evaluators::material_evaluator::MaterialEvaluator::from(
-                            BASE64_STANDARD
-                                .decode(
-                                    a.next()
-                                        .expect("insert base64 representation of eval function"),
-                                )
-                                .expect("invalid base64")
-                                .as_slice(),
-                        ),
+                        evaluators::material_evaluator::MaterialEvaluator::from_str(
+                            &a.next().expect("insert string representation"),
+                        )?,
                     ),
                     search_depth: a
                         .next()
@@ -492,15 +485,10 @@ fn main() {
                         #[cfg(feature = "using_default")]
                         evaluators::positional_evaluator::PositionalEvaluator::default(),
                         #[cfg(not(feature = "using_default"))]
-                        evaluators::positional_evaluator::PositionalEvaluator::from(
-                            BASE64_STANDARD
-                                .decode(
-                                    a.next()
-                                        .expect("insert base64 representation of eval function"),
-                                )
-                                .expect("invalid base64")
-                                .as_slice(),
-                        ),
+                        evaluators::positional_evaluator::PositionalEvaluator::from_str(
+                            &a.next()
+                                .expect("insert string representation of eval function"),
+                        )?,
                     ),
                     cache: FxHashMap::default(),
                 }),
@@ -526,15 +514,10 @@ fn main() {
                         #[cfg(feature = "using_default")]
                         evaluators::material_evaluator::MaterialEvaluator::default(),
                         #[cfg(not(feature = "using_default"))]
-                        evaluators::material_evaluator::MaterialEvaluator::from(
-                            BASE64_STANDARD
-                                .decode(
-                                    a.next()
-                                        .expect("insert base64 representation of eval function"),
-                                )
-                                .expect("invalid base64")
-                                .as_slice(),
-                        ),
+                        evaluators::material_evaluator::MaterialEvaluator::from_str(
+                            &a.next()
+                                .expect("insert string representation of eval function"),
+                        )?,
                     ),
                     search_depth: a
                         .next()
@@ -553,15 +536,10 @@ fn main() {
                         #[cfg(feature = "using_default")]
                         evaluators::positional_evaluator::PositionalEvaluator::default(),
                         #[cfg(not(feature = "using_default"))]
-                        evaluators::positional_evaluator::PositionalEvaluator::from(
-                            BASE64_STANDARD
-                                .decode(
-                                    a.next()
-                                        .expect("insert base64 representation of eval function"),
-                                )
-                                .expect("invalid base64")
-                                .as_slice(),
-                        ),
+                        evaluators::positional_evaluator::PositionalEvaluator::from_str(
+                            &a.next()
+                                .expect("insert string representation of eval function"),
+                        )?,
                     ),
                     cache: FxHashMap::default(),
                 }),
@@ -656,4 +634,5 @@ fn main() {
             _ => (),
         }
     }
+    Ok(())
 }
