@@ -106,6 +106,9 @@ impl Bot {
     pub fn find_best_move(&mut self, board: &mut Board) -> Option<Move> {
         let mut pseudo_legal_moves = board.get_pseudo_legal_moves();
 
+        let mut rng = rand::thread_rng();
+        pseudo_legal_moves.shuffle(&mut rng);
+
         pseudo_legal_moves.sort_unstable_by_key(|cmove| {
             if board.piece_type(&cmove.to()).is_some() {
                 -100

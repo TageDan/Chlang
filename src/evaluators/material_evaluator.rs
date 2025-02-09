@@ -43,7 +43,7 @@ impl FromStr for MaterialEvaluator {
 
 impl From<MaterialEvaluator> for String {
     fn from(value: MaterialEvaluator) -> Self {
-        crate::BASE64_STANDARD.encode(value.piece_values)
+        String::from_utf8(value.piece_values.into_iter().collect::<Vec<u8>>()).unwrap()
     }
 }
 
