@@ -4,9 +4,11 @@ use std::{
 };
 
 use base64::Engine;
+use rand::Rng;
 
 use crate::tree_evaluator::Eval;
 
+#[derive(Clone)]
 pub struct MaterialEvaluator {
     piece_values: [u8; 6],
 }
@@ -59,5 +61,28 @@ impl Eval for MaterialEvaluator {
                     as isize;
         }
         value
+    }
+    fn modified(&self) -> Box<dyn Eval> {
+        let temp = self.clone();
+        let string = String::from(temp);
+        let bytes = string.as_bytes();
+        let mut new_bytes = vec![];
+        for b in bytes {
+            if rand::thread_rng().gen_bool(1.0 / 10.0) {
+                let newval =
+                    ((*b as isize + 128 + rand::thread_rng().gen_range(-1..=1)) % 128) as u8;
+                new_bytes.push(newval);
+            } else {
+                new_bytes.push(*b);
+            }
+        }
+        let new_s = String::from_utf8(new_bytes).unwrap();
+        return Box::new(MaterialEvaluator::from_str(&new_s).unwrap());
+    }
+    fn bot_clone(&self) -> Box<dyn Eval> {
+        Box::new(self.clone())
+    }
+    fn string_rep(&self) -> String {
+        String::from(self.clone())
     }
 }

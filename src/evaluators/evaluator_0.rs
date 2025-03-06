@@ -1,20 +1,26 @@
 use std::{
     io::{BufRead, Read},
+    ops::Deref,
     str::FromStr,
 };
 
 use base64::Engine;
 use rand::Rng;
 
-use crate::tree_evaluator::Eval;
+use crate::{
+    board::{Player, Position},
+    tree_evaluator::Eval,
+};
 
 #[derive(Clone)]
-pub struct PositionalEvaluator {
+pub struct Evaluator {
     piece_values: [u8; 6],
     piece_positional_values: [[[u8; 8]; 8]; 6],
+    piece_attack_values: [u8; 6],
+    castle_bonus: [u8; 2],
 }
 
-impl Default for PositionalEvaluator {
+impl Default for Evaluator {
     fn default() -> Self {
         Self {
             piece_values: [10, 30, 30, 50, 85, 0],
@@ -86,11 +92,13 @@ impl Default for PositionalEvaluator {
                     [0, 0, 0, 0, 0, 0, 0, 0],
                 ],
             ],
+            piece_attack_values: [5, 7, 7, 8, 10, 90],
+            castle_bonus: [6, 6],
         }
     }
 }
 
-impl From<&[u8]> for PositionalEvaluator {
+impl From<&[u8]> for Evaluator {
     fn from(value: &[u8]) -> Self {
         let piece_values = value[0..6].try_into().unwrap();
         let mut piece_positional_values = [[[0; 8]; 8]; 6];
@@ -102,20 +110,26 @@ impl From<&[u8]> for PositionalEvaluator {
             let j = i - current_type as usize * 8 * 8;
             piece_positional_values[current_type as usize][j / 8][j % 8] = *b;
         }
+        let piece_attack_values = value[6 + 8 * 8 * 6..6 + 8 * 8 * 6 + 6].try_into().unwrap();
+        let castle_bonus = value[6 + 8 * 8 * 6 + 6..6 + 8 * 8 * 6 + 6 + 2]
+            .try_into()
+            .unwrap();
 
         Self {
             piece_values,
             piece_positional_values,
+            piece_attack_values,
+            castle_bonus,
         }
     }
 }
 
-impl FromStr for PositionalEvaluator {
+impl FromStr for Evaluator {
     type Err = &'static str;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(s.chars()
             .map(|x| match x.is_ascii() {
-                true => Ok(x as u8),
+                true => Ok(x as u8 - 33),
                 _ => return Err("should be valid ascii"),
             })
             .collect::<Result<Vec<_>, _>>()?
@@ -124,8 +138,8 @@ impl FromStr for PositionalEvaluator {
     }
 }
 
-impl From<PositionalEvaluator> for String {
-    fn from(value: PositionalEvaluator) -> Self {
+impl From<Evaluator> for String {
+    fn from(value: Evaluator) -> Self {
         let mut bytes = Vec::new();
         value.piece_values.iter().for_each(|x| bytes.push(*x));
         value.piece_positional_values.iter().for_each(|mat| {
@@ -135,11 +149,22 @@ impl From<PositionalEvaluator> for String {
                 }
             }
         });
+        value
+            .piece_attack_values
+            .iter()
+            .for_each(|x| bytes.push(*x));
+        value.castle_bonus.iter().for_each(|x| bytes.push(*x));
+        bytes.iter_mut().for_each(|x| {
+            *x = *x + 33;
+            if !(33..=126).contains(x) {
+                println!("not in range: {}", *x);
+            }
+        });
         String::from_utf8(bytes).unwrap()
     }
 }
 
-impl Eval for PositionalEvaluator {
+impl Eval for Evaluator {
     fn evaluate(&self, board: &mut crate::board::Board) -> isize {
         let mut value = 0;
         for piece_index in 0..6 {
@@ -152,32 +177,57 @@ impl Eval for PositionalEvaluator {
                     let col = i % 8;
                     let row = i / 8;
                     value += self.piece_positional_values[piece_index][row][col] as isize;
+                    value -= board
+                        .number_of_attacks_by_color(&Position::from(1 << i), &Player::Black)
+                        * self.piece_attack_values[piece_index] as isize;
+                    value += board
+                        .number_of_attacks_by_color(&Position::from(1 << i), &Player::White)
+                        * self.piece_attack_values[piece_index] as isize;
                 }
                 if 1 << i & black_pieces != 0 {
                     let col = i % 8;
                     let row = 7 - i / 8;
                     value -= self.piece_positional_values[piece_index][row][col] as isize;
+                    value += board
+                        .number_of_attacks_by_color(&Position::from(1 << i), &Player::Black)
+                        * self.piece_attack_values[piece_index] as isize;
+                    value -= board
+                        .number_of_attacks_by_color(&Position::from(1 << i), &Player::White)
+                        * self.piece_attack_values[piece_index] as isize;
                 }
             }
         }
+        if board.can_castle_short[0] {
+            value -= self.castle_bonus[0] as isize;
+        }
+        if board.can_castle_short[1] {
+            value += self.castle_bonus[0] as isize;
+        }
+        if board.can_castle_long[0] {
+            value -= self.castle_bonus[1] as isize;
+        }
+        if board.can_castle_long[1] {
+            value += self.castle_bonus[1] as isize;
+        }
         value
     }
+
     fn modified(&self) -> Box<dyn Eval> {
         let temp = self.clone();
         let string = String::from(temp);
         let bytes = string.as_bytes();
         let mut new_bytes = vec![];
         for b in bytes {
+            let nb = b - 33;
             if rand::thread_rng().gen_bool(1.0 / 10.0) {
-                let newval =
-                    ((*b as isize + 128 + rand::thread_rng().gen_range(-1..=1)) % 128) as u8;
+                let newval = (nb as isize + rand::thread_rng().gen_range(-2..=2));
+                let newval = newval.max(0).min(93) as u8;
                 new_bytes.push(newval);
             } else {
-                new_bytes.push(*b);
+                new_bytes.push(nb);
             }
         }
-        let new_s = String::from_utf8(new_bytes).unwrap();
-        return Box::new(PositionalEvaluator::from_str(&new_s).unwrap());
+        return Box::new(Evaluator::from(new_bytes.as_slice()));
     }
     fn bot_clone(&self) -> Box<dyn Eval> {
         Box::new(self.clone())

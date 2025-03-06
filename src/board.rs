@@ -58,6 +58,9 @@ impl Position {
 
 impl From<u64> for Position {
     fn from(value: u64) -> Self {
+        if value == 0 {
+            return Self::new(0, 0);
+        }
         let l = value.ilog2();
         Self::new(l / 8, l % 8)
     }
@@ -805,6 +808,112 @@ impl Board {
         self.moves_since_capture = moves_since_capture;
     }
 
+    pub fn number_of_attacks_by_color(&self, pos: &Position, color: &Player) -> isize {
+        let mut num = 0;
+        match color {
+            Player::Black => {
+                for cmove in self.get_pseudo_legal_king_moves_from_pos(&pos, &Player::White, false)
+                {
+                    if self
+                        .piece_type(&cmove.to())
+                        .is_some_and(|x| x.0 == Player::Black && x.1 == Piece::King)
+                    {
+                        // attacked by king
+                        num += 1;
+                    }
+                }
+                for cmove in self.get_pseudo_legal_bishop_moves_from_pos(&pos, &Player::White) {
+                    if self.piece_type(&cmove.to()).is_some_and(|x| {
+                        x.0 == Player::Black && (x.1 == Piece::Bishop || x.1 == Piece::Queen)
+                    }) {
+                        // attacked by bishop or queen
+                        num += 1;
+                    }
+                }
+                for cmove in self.get_pseudo_legal_rook_moves_from_pos(&pos, &Player::White) {
+                    if self.piece_type(&cmove.to()).is_some_and(|x| {
+                        x.0 == Player::Black && (x.1 == Piece::Rook || x.1 == Piece::Queen)
+                    }) {
+                        // attacked by Rook or queen
+                        num += 1;
+                    }
+                }
+                for cmove in self.get_pseudo_legal_knight_moves_from_pos(&pos, &Player::White) {
+                    if self
+                        .piece_type(&cmove.to())
+                        .is_some_and(|x| x.0 == Player::Black && x.1 == Piece::Knight)
+                    {
+                        // attacked by knight
+                        num += 1;
+                    }
+                }
+                for cmove in self.get_pseudo_legal_pawn_moves_from_pos(&pos, &Player::White) {
+                    if cmove.to().col == pos.col {
+                        continue;
+                    }
+                    if self
+                        .piece_type(&cmove.to())
+                        .is_some_and(|x| x.0 == Player::Black && x.1 == Piece::Pawn)
+                    {
+                        // attacked by pawn
+                        num += 1;
+                    }
+                }
+                return num;
+            }
+            Player::White => {
+                for cmove in self.get_pseudo_legal_king_moves_from_pos(&pos, &Player::Black, false)
+                {
+                    if self
+                        .piece_type(&cmove.to())
+                        .is_some_and(|x| x.0 == Player::White && x.1 == Piece::King)
+                    {
+                        // attacked by king
+                        num += 1;
+                    }
+                }
+                for cmove in self.get_pseudo_legal_bishop_moves_from_pos(&pos, &Player::Black) {
+                    if self.piece_type(&cmove.to()).is_some_and(|x| {
+                        x.0 == Player::White && (x.1 == Piece::Bishop || x.1 == Piece::Queen)
+                    }) {
+                        // attacked by bishop or queen
+                        num += 1;
+                    }
+                }
+                for cmove in self.get_pseudo_legal_rook_moves_from_pos(&pos, &Player::Black) {
+                    if self.piece_type(&cmove.to()).is_some_and(|x| {
+                        x.0 == Player::White && (x.1 == Piece::Rook || x.1 == Piece::Queen)
+                    }) {
+                        // attacked by Rook or queen
+                        num += 1;
+                    }
+                }
+                for cmove in self.get_pseudo_legal_knight_moves_from_pos(&pos, &Player::Black) {
+                    if self
+                        .piece_type(&cmove.to())
+                        .is_some_and(|x| x.0 == Player::White && x.1 == Piece::Knight)
+                    {
+                        // attacked by knight
+                        num += 1;
+                    }
+                }
+                for cmove in self.get_pseudo_legal_pawn_moves_from_pos(&pos, &Player::Black) {
+                    if cmove.to().col == pos.col {
+                        continue;
+                    }
+                    if self
+                        .piece_type(&cmove.to())
+                        .is_some_and(|x| x.0 == Player::White && x.1 == Piece::Pawn)
+                    {
+                        // attacked by pawn
+                        num += 1;
+                    }
+                }
+                return num;
+            }
+        }
+    }
+
     pub fn attacked_by_color(&self, pos: &Position, color: &Player) -> bool {
         match color {
             Player::Black => {
@@ -1006,7 +1115,7 @@ impl Default for Board {
 }
 
 // Struct used as a key_representing a board_state
-#[derive(Hash, PartialEq, Eq)]
+#[derive(Hash, PartialEq, Eq, Clone)]
 pub struct KeyStruct {
     turn: Player,
     piece_bitboards: [u64; 6],
