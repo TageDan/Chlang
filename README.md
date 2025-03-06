@@ -31,6 +31,9 @@ I also wan't to be able to decompile the bytecode into the higher level language
 - [ ] Interface
   - [ ] over ssh
   - [ ] website
+- [ ] Tools
+  - [X] Bot compare
+  - [ ] Bot training
 
 
 ## Finished Evaluator specification
@@ -144,3 +147,5 @@ cache hit is too rare for the added overhead of searching the cache for every no
 ### 9/2
 Today I decided to limit the range for coefficients to 0-128 (not including 128) becuase that is what normal ascii supports and I can't be bothered to do something about the rest.
 
+### 5/3
+Today I looked at the string for a bot and realised that I should have done that earlier. As it turns out, most ascii values are non visible. becuase of this I will further restrict values to the visible non space characters. (33-126 (94 different values)), it's a little bit sad the the bots can't have that much fine grained detail anymore but I think it's worth it for the sake of having nice looking string representation.
