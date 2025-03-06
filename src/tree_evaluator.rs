@@ -10,6 +10,9 @@ use crate::{
 
 pub trait Eval {
     fn evaluate(&self, board: &mut Board) -> isize;
+    fn modified(&self) -> Box<dyn Eval>;
+    fn bot_clone(&self) -> Box<dyn Eval>;
+    fn string_rep(&self) -> String;
 }
 
 pub fn eval(
@@ -158,6 +161,22 @@ impl Bot {
                 }
                 return best_move.0;
             }
+        }
+    }
+
+    pub fn modified(&self) -> Bot {
+        Bot {
+            evaluator: self.evaluator.modified(),
+            search_depth: self.search_depth,
+            cache: FxHashMap::default(),
+        }
+    }
+
+    pub fn bot_clone(&self) -> Bot {
+        Bot {
+            evaluator: self.evaluator.bot_clone(),
+            search_depth: self.search_depth,
+            cache: FxHashMap::default(),
         }
     }
 }
