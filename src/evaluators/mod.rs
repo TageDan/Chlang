@@ -13,10 +13,10 @@ impl tree_evaluator::Eval for NoneEvaluator {
     fn evaluate(&self, board: &mut crate::board::Board) -> isize {
         return 0;
     }
-    fn modified(&self) -> Box<dyn Eval> {
+    fn modified(&self) -> Box<dyn Eval + Sync + Send> {
         return Box::new(self.clone());
     }
-    fn bot_clone(&self) -> Box<dyn Eval> {
+    fn bot_clone(&self) -> Box<dyn Eval + Sync + Send> {
         Box::new(self.clone())
     }
     fn string_rep(&self) -> String {

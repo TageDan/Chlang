@@ -3,11 +3,12 @@ name = "chlang"
 version = "0.1.0"
 edition = "2021"
 
-[profile.release]
-debug = true
+# [profile.release]
+# debug = true
 
 [dependencies]
-base64 = "0.22.1"
+gloo-timers = { version = "0.2", features = ["futures"] }
+leptos = { version = "0.7.7", features = ["csr"] }
 # backtrace-on-stack-overflow = "0.3.0"
 pix-engine = {version = "0.8.0", optional = true }
 rand = "0.8.5"
@@ -15,5 +16,25 @@ rustc-hash = "2.1.0"
 
 [features]
 gui = ["dep:pix-engine"]
-compare = []
-using_default = []
+
+[[bin]]
+name= "game"
+path="src/main.rs"
+required-features=["gui"]
+
+[[bin]]
+name="compile"
+path="src/compile/main.rs"
+
+[[bin]]
+name="compare"
+path="src/compare/main.rs"
+
+[[bin]]
+name="train"
+path= "src/train/main.rs"
+
+[[bin]]
+name="web"
+path="src/web_page/main.rs"
+

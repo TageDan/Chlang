@@ -3,7 +3,6 @@ use std::{
     str::FromStr,
 };
 
-use base64::Engine;
 use rand::Rng;
 
 use crate::tree_evaluator::Eval;
@@ -62,7 +61,7 @@ impl Eval for MaterialEvaluator {
         }
         value
     }
-    fn modified(&self) -> Box<dyn Eval> {
+    fn modified(&self) -> Box<dyn Eval + Sync + Send> {
         let temp = self.clone();
         let string = String::from(temp);
         let bytes = string.as_bytes();
@@ -79,7 +78,7 @@ impl Eval for MaterialEvaluator {
         let new_s = String::from_utf8(new_bytes).unwrap();
         return Box::new(MaterialEvaluator::from_str(&new_s).unwrap());
     }
-    fn bot_clone(&self) -> Box<dyn Eval> {
+    fn bot_clone(&self) -> Box<dyn Eval + Sync + Send> {
         Box::new(self.clone())
     }
     fn string_rep(&self) -> String {

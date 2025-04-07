@@ -24,29 +24,29 @@ I also wan't to be able to decompile the bytecode into the higher level language
       - [X] Positional
   - [X] pruning
 - [ ] Chlang-language
-  - [ ] bytecode interpreter for piece-values, weight's for attacks, positioning of pieces, checks, pins, skewers etc.
-  - [ ] possible byte-code feature extensions 
+  - [X] bytecode interpreter for piece-values, weight's for attacks, positioning of pieces, checks, pins, skewers etc.
+  - [ ] ~possible byte-code feature extensions~ 
   - [ ] high-level language compiler
   - [ ] decompiler
 - [ ] Interface
-  - [ ] over ssh
+  - [ ] ~over ssh~
   - [ ] website
-- [ ] Tools
+- [X] Tools
   - [X] Bot compare
-  - [ ] Bot training
+  - [X] Bot training (done but slow)
 
 
 ## Finished Evaluator specification
 The finished evaluator should be able to evaluate:
 - [X] Piece material
 - [X] Positioning of pieces
-- [ ] Attacks/defenders of pieces (maybe except en passant, since it's kinda ambigious how to implement)
-- [ ] Possibility of castle
+- [X] Attacks/defenders of pieces (maybe except en passant, since it's kinda ambigious how to implement)
+- [X] Possibility of castle
 
 I also want it to be able to evaluate (though these might be harder to implement / could affect performance more):
-- [ ] Pins
-- [ ] Skewers
-- [ ] Forks
+- [ ] ~Pins~
+- [ ] ~Skewers~
+- [ ] ~Forks~
 
 Theese should be representable in bytes as follows:
 bytes(<values for pieces>, <value_for_pieces_for_square>, <value_for_piece_attacks>, <value_for_castle_long_short>)
@@ -149,3 +149,6 @@ Today I decided to limit the range for coefficients to 0-128 (not including 128)
 
 ### 5/3
 Today I looked at the string for a bot and realised that I should have done that earlier. As it turns out, most ascii values are non visible. becuase of this I will further restrict values to the visible non space characters. (33-126 (94 different values)), it's a little bit sad the the bots can't have that much fine grained detail anymore but I think it's worth it for the sake of having nice looking string representation.
+
+### 26/3
+Today I decided to scratch features with a lower priority. Mainly prioritizing a high level language and a web interface.

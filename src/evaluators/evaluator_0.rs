@@ -4,7 +4,6 @@ use std::{
     str::FromStr,
 };
 
-use base64::Engine;
 use rand::Rng;
 
 use crate::{
@@ -212,15 +211,15 @@ impl Eval for Evaluator {
         value
     }
 
-    fn modified(&self) -> Box<dyn Eval> {
+    fn modified(&self) -> Box<dyn Eval + Sync + Send> {
         let temp = self.clone();
         let string = String::from(temp);
         let bytes = string.as_bytes();
         let mut new_bytes = vec![];
         for b in bytes {
             let nb = b - 33;
-            if rand::thread_rng().gen_bool(1.0 / 10.0) {
-                let newval = (nb as isize + rand::thread_rng().gen_range(-2..=2));
+            if rand::thread_rng().gen_bool(1.0 / 5.0) {
+                let newval = (nb as isize + rand::thread_rng().gen_range(-5..=5));
                 let newval = newval.max(0).min(93) as u8;
                 new_bytes.push(newval);
             } else {
@@ -229,7 +228,7 @@ impl Eval for Evaluator {
         }
         return Box::new(Evaluator::from(new_bytes.as_slice()));
     }
-    fn bot_clone(&self) -> Box<dyn Eval> {
+    fn bot_clone(&self) -> Box<dyn Eval + Sync + Send> {
         Box::new(self.clone())
     }
     fn string_rep(&self) -> String {

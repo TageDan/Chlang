@@ -1,0 +1,2 @@
+mkdir dist/images
+cp images/* dist/images

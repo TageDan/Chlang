@@ -50,11 +50,17 @@ where
                 cache: FxHashMap::default(),
             })),
 
+            "DEFAULT" => Ok(User::Bot(tree_evaluator::Bot {
+                evaluator: Box::new(evaluators::evaluator_0::Evaluator::default()),
+                search_depth: 4,
+                cache: FxHashMap::default(),
+            })),
+
             s => Ok(User::Bot(tree_evaluator::Bot {
                 evaluator: Box::new(
                     evaluators::evaluator_0::Evaluator::from_str(s).expect("Bad string rep"),
                 ),
-                search_depth: 3,
+                search_depth: 4,
                 cache: FxHashMap::default(),
             })),
         }

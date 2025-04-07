@@ -17,7 +17,7 @@ pub enum GameState {
 }
 
 /// Bitboard representation of a chess board
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone)]
 pub struct Board {
     pub turn: Player,
     pub moves_since_capture: u8,
@@ -73,7 +73,7 @@ pub enum Player {
 }
 
 impl Player {
-    fn idx(&self) -> usize {
+    pub fn idx(&self) -> usize {
         match self {
             Self::White => 1,
             Self::Black => 0,

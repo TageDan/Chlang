@@ -10,15 +10,15 @@ use crate::{
 
 pub trait Eval {
     fn evaluate(&self, board: &mut Board) -> isize;
-    fn modified(&self) -> Box<dyn Eval>;
-    fn bot_clone(&self) -> Box<dyn Eval>;
+    fn modified(&self) -> Box<dyn Eval + Sync + Send>;
+    fn bot_clone(&self) -> Box<dyn Eval + Sync + Send>;
     fn string_rep(&self) -> String;
 }
 
 pub fn eval(
     board: &mut Board,
     depth: u8,
-    evaluator: &Box<dyn Eval>,
+    evaluator: &Box<dyn Eval + Sync + Send>,
     mut alpha: isize,
     mut beta: isize,
     cache: &mut FxHashMap<KeyStruct, (isize, bool, u8)>,
@@ -100,9 +100,18 @@ pub fn eval(
 }
 
 pub struct Bot {
-    pub evaluator: Box<dyn Eval>,
+    pub evaluator: Box<dyn Eval + Sync + Send>,
     pub search_depth: u8,
     pub cache: FxHashMap<KeyStruct, (isize, bool, u8)>,
+}
+impl Clone for Bot {
+    fn clone(&self) -> Self {
+        Self {
+            evaluator: self.evaluator.bot_clone(),
+            search_depth: self.search_depth,
+            cache: self.cache.clone(),
+        }
+    }
 }
 
 impl Bot {
