@@ -43,12 +43,7 @@ fn handle_click_on_board(
     square_idx: i64,
     white_player: ReadSignal<User>,
     black_player: ReadSignal<User>,
-    possible_promotion: ReadSignal<Option<Position>>,
-    set_possible_promotion: WriteSignal<Option<Position>>,
 ) {
-    if possible_promotion.get().is_some() {
-        *set_possible_promotion.write() = None;
-    }
     if selected_square
         .get()
         .is_some_and(|p| p.col + p.row * 8 == square_idx)
@@ -57,13 +52,6 @@ fn handle_click_on_board(
     } else if let Some(p1) = selected_square.get() {
         let p2 = Position::new(square_idx / 8, square_idx % 8);
         let mut b = board.get();
-        if b.piece_type(&p1).is_some_and(|(pl, pi)| {
-            (pl == Player::White && pi == Piece::Pawn && p1.row == 6 && p2.row == 7)
-                || (pl == Player::Black && pi == Piece::Pawn && p1.row == 1 && p2.row == 0)
-        }) {
-            *set_possible_promotion.write() = Some(p2);
-            return;
-        }
         let res = b.make_move(&Move::new(&p1, &p2));
         if res.is_err() {
             let pos = Position::new(square_idx / 8, square_idx % 8);
@@ -77,36 +65,6 @@ fn handle_click_on_board(
         let pos = Position::new(square_idx / 8, square_idx % 8);
         *set_selected_square.write() = Some(pos);
     }
-}
-
-fn promote(
-    selected_square: ReadSignal<Option<Position>>,
-    set_selected_square: WriteSignal<Option<Position>>,
-    board: ReadSignal<Board>,
-    set_board: WriteSignal<Board>,
-    white_player: ReadSignal<User>,
-    black_player: ReadSignal<User>,
-    possible_promotion: ReadSignal<Option<Position>>,
-    set_possible_promotion: WriteSignal<Option<Position>>,
-    piece_type: Piece,
-) {
-    let cmove = Move::promotion(
-        &selected_square.get().unwrap(),
-        &possible_promotion.get().unwrap(),
-        piece_type,
-    );
-    logging::log!(
-        "{:?} {:?} {:?}",
-        cmove.from(),
-        cmove.to(),
-        cmove.promotion_bitboard_index()
-    );
-    let mut b = board.get();
-    logging::log!("{:?}", b.make_move(&cmove));
-    set_board.set(b);
-    set_selected_square.set(None);
-    set_possible_promotion.set(None);
-    play(white_player, black_player, board, set_board);
 }
 
 fn play(
@@ -165,7 +123,6 @@ fn App() -> impl IntoView {
 
     let (black_player, set_black_player) = signal(User::Human);
     let (white_player, set_white_player) = signal(User::Human);
-    let (possible_promotion, set_possible_promotion) = signal(None);
     let game_state = move || board.get().get_game_state();
 
     let form_or_game = move || {
@@ -173,12 +130,12 @@ fn App() -> impl IntoView {
 
         <div class="top-bar">
             <label for="stringrep">String representation / id</label>
-            <input id="string_rep" maxlength="398" bind:value=(string,set_string) class:good=move||string.read().len() == 398/>
+            <input id="string_rep" maxlength="398" minlength="398" required bind:value=(string,set_string) />
             <button on:click= move|_| check_and_update(string.get(), set_board, board, set_white_player, white_player, black_player) >play</button>
             <button on:click= move|_| random(set_string)>randomize</button>
         </div>
 
-        <div style="display: flex; flex-direction: row; gap: 10px;">
+
         <div class="board" >
             {(0..64).into_iter().map(|n| view! {
                 <div
@@ -186,7 +143,7 @@ fn App() -> impl IntoView {
                 class:grideven=move || (n+n/8) %2 == 0
                 class:gridselected=move || selected_square.get().is_some_and(|x| x.row*8 + x.col == n)
 
-                on:click=move|_| handle_click_on_board(selected_square, set_selected_square, board,set_board, n, white_player, black_player, possible_promotion, set_possible_promotion)
+                on:click=move|_| handle_click_on_board(selected_square, set_selected_square, board,set_board, n, white_player, black_player)
 
                 inner_html={
 
@@ -243,14 +200,6 @@ fn App() -> impl IntoView {
                     }
                 }></div>
             }).collect::<Vec<_>>()}
-        </div>
-        <p style:display=move|| if possible_promotion.get().is_some() {"block"} else {"none"} >
-        <img class = "grideven" src="images/white-queen.png" on:click= move|_| promote(selected_square, set_selected_square, board, set_board, white_player, black_player, possible_promotion, set_possible_promotion, Piece::Queen) />
-        <img class = "grideven" src="images/white-rook.png" on:click= move|_| promote(selected_square, set_selected_square, board, set_board, white_player, black_player, possible_promotion, set_possible_promotion, Piece::Rook) />
-        <img class = "grideven" src="images/white-bishop.png" on:click= move|_| promote(selected_square, set_selected_square, board, set_board, white_player, black_player, possible_promotion, set_possible_promotion, Piece::Bishop) />
-        <img class = "grideven" src="images/white-knight.png" on:click= move|_| promote(selected_square, set_selected_square, board, set_board, white_player, black_player, possible_promotion, set_possible_promotion, Piece::Knight) />
-
-        </p>
         </div>
 
         <h3>GameState</h3>

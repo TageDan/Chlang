@@ -3,8 +3,8 @@
   <head>
 
 <script type="module">
-import init, * as bindings from '/web-f9ee9e3e901eeb50.js';
-const wasm = await init({ module_or_path: '/web-f9ee9e3e901eeb50_bg.wasm' });
+import init, * as bindings from '/web-81c4d440604030b.js';
+const wasm = await init({ module_or_path: '/web-81c4d440604030b_bg.wasm' });
 
 
 window.wasmBindings = bindings;
@@ -46,7 +46,7 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
   
 }
 body{
- background: green;
+ background: yellow;
   overflow-x: hidden;
 }
 
@@ -66,7 +66,7 @@ input {
   background: white;
 }
 
-input:valid {
+.good {
   background: green;
 }
 
@@ -76,7 +76,7 @@ img {
 }
 
 </style>
-  <link rel="modulepreload" href="/web-f9ee9e3e901eeb50.js" crossorigin="anonymous" integrity="sha384-b9FrOE1gTYsxAGqyfkRCBP9fwt6ZCermaAvoL/imPDcHMQHm1VEnK9MW2yAFbMmK"><link rel="preload" href="/web-f9ee9e3e901eeb50_bg.wasm" crossorigin="anonymous" integrity="sha384-Nnh/2EWm7kUChZS4LaghBfQBAh3dKKQ9oxz6WEpF0zNN22nTBu6O0sUInnOhHaoG" as="fetch" type="application/wasm"></head>
+  <link rel="modulepreload" href="/web-81c4d440604030b.js" crossorigin="anonymous" integrity="sha384-hgof9DxUl9kbMr5fk2dBRMbTOtFHzbYQTZ+L8NEbDXtzlydbyIVM2FPdlZcE8JKG"><link rel="preload" href="/web-81c4d440604030b_bg.wasm" crossorigin="anonymous" integrity="sha384-m0lzN6gmTvWLrIYsE9I6eVVAeDQjxztbQRPS85MR2AGM7XE/TOgaskxBq/ilvWSa" as="fetch" type="application/wasm"></head>
   <body><script>"use strict";
 
 (function () {

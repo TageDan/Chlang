@@ -680,12 +680,12 @@ impl Board {
                 {
                     moves.push(Move::new(pos, &take_left));
                 }
-                for m in moves.iter_mut() {
+                for m in moves.clone().iter() {
                     let to = m.to();
                     if to.row == 7 {
                         let from = m.from();
                         for piece in [Piece::Knight, Piece::Rook, Piece::Bishop, Piece::Queen] {
-                            *m = Move::promotion(&from, &m.to(), piece);
+                            moves.push(Move::promotion(&from, &m.to(), piece));
                         }
                     }
                 }
