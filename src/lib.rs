@@ -1,5 +1,6 @@
 pub mod board;
 pub mod cmove;
+pub mod compile;
 pub mod evaluators;
 pub mod game;
 pub mod parse;

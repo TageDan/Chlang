@@ -1,10 +1,14 @@
+
+
 <!DOCTYPE html>
 <html>
   <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script type="module">
-import init, * as bindings from '/web-65129f700da6b89a.js';
-const wasm = await init({ module_or_path: '/web-65129f700da6b89a_bg.wasm' });
+import init, * as bindings from '/web-ffb97ef04bae62de.js';
+const wasm = await init({ module_or_path: '/web-ffb97ef04bae62de_bg.wasm' });
 
 
 window.wasmBindings = bindings;
@@ -46,7 +50,8 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
   
 }
 body{
- background: yellow;
+ background: black;
+color: white;
   overflow-x: hidden;
 }
 
@@ -75,8 +80,12 @@ img {
   height: 50px
 }
 
+a {
+  color: blue;
+}
+
 </style>
-  <link rel="modulepreload" href="/web-65129f700da6b89a.js" crossorigin="anonymous" integrity="sha384-zRIeCwGicXEzLbSIQEBG/7AA1hgo+tZCRJvsRwM8N/GMIH+RSp5G9XdlS9NtnjIJ"><link rel="preload" href="/web-65129f700da6b89a_bg.wasm" crossorigin="anonymous" integrity="sha384-fgjwwRh+mNSrDGmji3TTJXwavLzG7yQzkeJaOSsPNandQjGYR6UWv0UY3oL8p3qm" as="fetch" type="application/wasm"></head>
+  <link rel="modulepreload" href="/web-ffb97ef04bae62de.js" crossorigin="anonymous" integrity="sha384-rt6j20+ll/GUVXxVXxPibn7cZTS7NSsB51t1A+TAgelV2ncDGQhebIerdAHLPfOy"><link rel="preload" href="/web-ffb97ef04bae62de_bg.wasm" crossorigin="anonymous" integrity="sha384-7P1WPkyG8l1Rmo5uRzD+znbD4zhxtEQvrTUDLjn0pGkN1tRhQsXpSVrdjMfq01tJ" as="fetch" type="application/wasm"></head>
   <body><script>"use strict";
 
 (function () {

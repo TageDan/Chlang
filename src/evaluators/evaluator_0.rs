@@ -11,7 +11,7 @@ use crate::{
     tree_evaluator::Eval,
 };
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Evaluator {
     piece_values: [u8; 6],
     piece_positional_values: [[[u8; 8]; 8]; 6],
@@ -169,10 +169,10 @@ impl Eval for Evaluator {
         for piece_index in 0..6 {
             let white_pieces = board.white_piece_bitboard & board.piece_bitboards[piece_index];
             let black_pieces = board.black_piece_bitboard & board.piece_bitboards[piece_index];
-            value += self.piece_values[piece_index] as isize * (white_pieces).count_ones() as isize;
-            value -= self.piece_values[piece_index] as isize * (black_pieces).count_ones() as isize;
+            value += self.piece_values[piece_index] as isize * (white_pieces.count_ones() as isize);
+            value -= self.piece_values[piece_index] as isize * (black_pieces.count_ones() as isize);
             for i in 0..64 {
-                if 1 << i & white_pieces != 0 {
+                if (1 << i) & white_pieces != 0 {
                     let col = i % 8;
                     let row = i / 8;
                     value += self.piece_positional_values[piece_index][row][col] as isize;
@@ -183,14 +183,14 @@ impl Eval for Evaluator {
                         .number_of_attacks_by_color(&Position::from(1 << i), &Player::White)
                         * self.piece_attack_values[piece_index] as isize;
                 }
-                if 1 << i & black_pieces != 0 {
-                    let col = i % 8;
+                if (1 << i) & black_pieces != 0 {
+                    let col = 7 - (i % 8);
                     let row = 7 - i / 8;
                     value -= self.piece_positional_values[piece_index][row][col] as isize;
-                    value += board
+                    value -= board
                         .number_of_attacks_by_color(&Position::from(1 << i), &Player::Black)
                         * self.piece_attack_values[piece_index] as isize;
-                    value -= board
+                    value += board
                         .number_of_attacks_by_color(&Position::from(1 << i), &Player::White)
                         * self.piece_attack_values[piece_index] as isize;
                 }

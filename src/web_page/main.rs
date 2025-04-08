@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use chlang::{
     board::{self, Board, GameState, Player, Position},
     cmove::Move,
@@ -21,8 +23,8 @@ fn check_and_update(
     white_player: ReadSignal<User>,
     black_player: ReadSignal<User>,
 ) {
-    let bytes = string.as_bytes();
-    let bot = evaluator_0::Evaluator::from(bytes);
+    let bot = evaluator_0::Evaluator::from_str(&string).unwrap();
+    logging::log!("{:?}", bot);
     let bot = Bot {
         evaluator: Box::new(bot),
         search_depth: 3,
