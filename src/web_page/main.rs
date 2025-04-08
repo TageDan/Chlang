@@ -253,13 +253,13 @@ fn App() -> impl IntoView {
         </p>
         </div>
 
-        <h3>GameState</h3>
-        <p>{move || match game_state(){
+        <h3>
+        {move || match game_state(){
             GameState::Playing => "PLAYING",
             GameState::Draw => "DRAW",
             GameState::Win(Player::White) => "White wins",
             GameState::Win(Player::Black) => "Black Wins"
-        }}</p>
+        }}</h3>
 
 
         <div>
