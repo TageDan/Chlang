@@ -1,0 +1,12 @@
+dictionaries = []
+words = [
+    "chlang",
+    "flamegraph",
+    "leptos",
+    "tage",
+    "wsl",
+]
+flag_words = []
+ignore_paths = []
+ignore_patterns = []
+use_global = true
