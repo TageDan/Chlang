@@ -3,8 +3,8 @@ name = "chlang"
 version = "0.1.0"
 edition = "2021"
 
-# [profile.release]
-# debug = true
+[profile.release]
+debug = true
 
 [dependencies]
 gloo-timers = { version = "0.2", features = ["futures"] }

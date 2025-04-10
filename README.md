@@ -28,7 +28,7 @@ I also want to be able to decompile the bytecode into the higher level language 
   - [ ] ~possible byte-code feature extensions~ 
   - [X] high-level language compiler
   - [ ] de-compiler
-- [ ] Interface
+- [X] Interface
   - [ ] ~over ssh~
   - [X] website
 - [X] Tools
@@ -47,6 +47,7 @@ I also want it to be able to evaluate (though these might be harder to implement
 - [ ] ~Pins~
 - [ ] ~Skewers~
 - [ ] ~Forks~
+- [ ] Piece number of moves (you would for example want to be able to move your king)
 
 These should be representable in bytes as follows:
 bytes(<values for pieces>, <value_for_pieces_for_square>, <value_for_piece_attacks>, <value_for_castle_long_short>)
@@ -159,3 +160,5 @@ Over the last few days I have created a little web interface for the bots. It ha
 
 I also implemented a compiler yesterday, It's really unstable, but it works, creating a de-compiler next which i want showing the code on the website. (so that you can edit the values in the high-level code and it will edit the values in the low-level representation)
 
+### 10/4
+Today I added the option to set a value for each pieces available moves. I also fixed a bug in the pruning algorithm.

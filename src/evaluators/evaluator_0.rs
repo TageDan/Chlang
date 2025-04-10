@@ -16,6 +16,7 @@ pub struct Evaluator {
     piece_values: [u8; 6],
     piece_positional_values: [[[u8; 8]; 8]; 6],
     piece_attack_values: [u8; 6],
+    piece_moves_values: [u8; 6],
     castle_bonus: [u8; 2],
 }
 
@@ -92,6 +93,7 @@ impl Default for Evaluator {
                 ],
             ],
             piece_attack_values: [5, 7, 7, 8, 10, 90],
+            piece_moves_values: [0, 2, 2, 2, 2, 3],
             castle_bonus: [6, 6],
         }
     }
@@ -113,11 +115,15 @@ impl From<&[u8]> for Evaluator {
         let castle_bonus = value[6 + 8 * 8 * 6 + 6..6 + 8 * 8 * 6 + 6 + 2]
             .try_into()
             .unwrap();
+        let piece_moves_values = value[6 + 8 * 8 * 6 + 6 + 2..6 + 8 * 8 * 6 + 6 + 2 + 6]
+            .try_into()
+            .unwrap();
 
         Self {
             piece_values,
             piece_positional_values,
             piece_attack_values,
+            piece_moves_values,
             castle_bonus,
         }
     }
@@ -153,6 +159,7 @@ impl From<Evaluator> for String {
             .iter()
             .for_each(|x| bytes.push(*x));
         value.castle_bonus.iter().for_each(|x| bytes.push(*x));
+        value.piece_moves_values.iter().for_each(|x| bytes.push(*x));
         bytes.iter_mut().for_each(|x| {
             *x = *x + 33;
             if !(33..=126).contains(x) {
@@ -172,6 +179,9 @@ impl Eval for Evaluator {
             value += self.piece_values[piece_index] as isize * (white_pieces.count_ones() as isize);
             value -= self.piece_values[piece_index] as isize * (black_pieces.count_ones() as isize);
             for i in 0..64 {
+                if (1 << i) & white_pieces == 0 && (1 << i) & black_pieces == 0 {
+                    continue;
+                }
                 if (1 << i) & white_pieces != 0 {
                     let col = i % 8;
                     let row = i / 8;
@@ -182,8 +192,11 @@ impl Eval for Evaluator {
                     value += board
                         .number_of_attacks_by_color(&Position::from(1 << i), &Player::White)
                         * self.piece_attack_values[piece_index] as isize;
-                }
-                if (1 << i) & black_pieces != 0 {
+                    value += self.piece_moves_values[piece_index] as isize
+                        * board
+                            .get_valid_moves_from_pos(&Position::from(1 << i))
+                            .len() as isize;
+                } else if (1 << i) & black_pieces != 0 {
                     let col = 7 - (i % 8);
                     let row = 7 - i / 8;
                     value -= self.piece_positional_values[piece_index][row][col] as isize;
@@ -193,6 +206,10 @@ impl Eval for Evaluator {
                     value += board
                         .number_of_attacks_by_color(&Position::from(1 << i), &Player::White)
                         * self.piece_attack_values[piece_index] as isize;
+                    value -= self.piece_moves_values[piece_index] as isize
+                        * board
+                            .get_valid_moves_from_pos(&Position::from(1 << i))
+                            .len() as isize;
                 }
             }
         }
@@ -221,9 +238,9 @@ impl Eval for Evaluator {
             if rand::thread_rng().gen_bool(1.0 / 5.0) {
                 let newval = (nb as isize + rand::thread_rng().gen_range(-5..=5));
                 let newval = newval.max(0).min(93) as u8;
-                new_bytes.push(newval);
+                new_bytes.push(newval + 33);
             } else {
-                new_bytes.push(nb);
+                new_bytes.push(nb + 33);
             }
         }
         return Box::new(Evaluator::from(new_bytes.as_slice()));

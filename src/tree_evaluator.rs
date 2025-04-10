@@ -75,6 +75,7 @@ pub fn eval(
             }
             let x = cache.entry(board.key()).or_insert((0, true, depth));
             x.2 = x.2.max(depth);
+            x.1 = true;
             x.0 = best;
             return best;
         }
@@ -93,6 +94,7 @@ pub fn eval(
             }
             let x = cache.entry(board.key()).or_insert((0, true, depth));
             x.2 = x.2.max(depth);
+            x.1 = true;
             x.0 = best;
             return best;
         }
@@ -158,8 +160,8 @@ impl Bot {
                             board,
                             self.search_depth - 1,
                             &self.evaluator,
-                            best_move.1,
                             isize::MIN,
+                            best_move.1,
                             &mut self.cache,
                         );
                         if val <= best_move.1 {

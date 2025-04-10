@@ -39,12 +39,15 @@ pub struct Position {
 }
 
 impl Position {
+    #[inline]
     pub fn bitboard(&self) -> u64 {
         1 << (self.row * 8 + self.col) as u32
     }
+    #[inline]
     pub fn valid(&self) -> bool {
         self.col < 8 && self.row < 8 && self.col >= 0 && self.row >= 0
     }
+    #[inline]
     pub fn new<T>(row: T, col: T) -> Self
     where
         T: Into<i64>,
@@ -57,6 +60,7 @@ impl Position {
 }
 
 impl From<u64> for Position {
+    #[inline]
     fn from(value: u64) -> Self {
         if value == 0 {
             return Self::new(0, 0);
@@ -73,6 +77,7 @@ pub enum Player {
 }
 
 impl Player {
+    #[inline]
     pub fn idx(&self) -> usize {
         match self {
             Self::White => 1,
@@ -82,6 +87,7 @@ impl Player {
 }
 
 impl Board {
+    #[inline]
     pub fn piece_type(&self, pos: &Position) -> Option<(Player, Piece)> {
         let color: Player = if self.white_piece_bitboard & pos.bitboard() != 0 {
             Player::White
@@ -381,6 +387,7 @@ impl Board {
     }
 
     /// Validate that king isn't in check on start of opponents turn
+    #[inline]
     fn is_valid(&mut self) -> bool {
         match self.turn {
             Player::White => {
@@ -782,6 +789,7 @@ impl Board {
     }
 
     /// unmake the last move on the board
+    #[inline]
     pub fn unmake_last(&mut self) {
         let (
             KeyStruct {
@@ -1019,12 +1027,14 @@ impl Board {
         }
     }
 
+    #[inline]
     fn is_fifty_move_rule(&self) -> bool {
         if self.moves_since_capture >= 100 {
             return true;
         }
         return false;
     }
+    #[inline]
     pub fn key(&self) -> KeyStruct {
         KeyStruct {
             turn: self.turn.clone(),
@@ -1037,6 +1047,7 @@ impl Board {
         }
     }
 
+    #[inline]
     fn is_threefold_rep(&self) -> bool {
         let mut counts = FxHashMap::default();
         let mut piece_count = (self.white_piece_bitboard | self.black_piece_bitboard).count_ones();
@@ -1055,6 +1066,7 @@ impl Board {
         false
     }
 
+    #[inline]
     pub fn get_valid_moves(&mut self) -> Vec<Move> {
         let mut moves = Vec::with_capacity(40 * 56);
         for cmove in self.get_pseudo_legal_moves() {
@@ -1066,6 +1078,21 @@ impl Board {
         moves
     }
 
+    #[inline]
+    pub fn get_valid_moves_from_pos(&mut self, pos: &Position) -> Vec<Move> {
+        self.get_pseudo_legal_moves_from_pos(pos)
+            .into_iter()
+            .filter(|x| {
+                if self.make_move(x).is_ok() {
+                    self.unmake_last();
+                    return true;
+                }
+                return false;
+            })
+            .collect()
+    }
+
+    #[inline]
     pub fn get_pseudo_legal_moves(&self) -> Vec<Move> {
         let turn_bitboard = match self.turn {
             Player::White => self.white_piece_bitboard,

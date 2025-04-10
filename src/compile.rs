@@ -271,3 +271,13 @@ pub fn compile(source: String) -> String {
 
     bytes.iter().map(|x| (x + 33) as char).collect::<String>()
 }
+
+fn decompile(str: &str) {
+    let mut result = String::new();
+    let mut bytes = str.bytes().map(|x| x - 33).collect::<Vec<u8>>();
+
+    result += "Extra:
+        LongCastle:
+             
+    ";
+}

@@ -11,6 +11,8 @@ use chlang::{
 use leptos::{html::Time, logging, prelude::*, task::spawn_local};
 use rustc_hash::FxHashMap;
 
+const BOT_STRING_LENGTH: usize = 410;
+
 fn main() {
     leptos::mount::mount_to_body(App)
 }
@@ -27,7 +29,7 @@ fn check_and_update(
     logging::log!("{:?}", bot);
     let bot = Bot {
         evaluator: Box::new(bot),
-        search_depth: 3,
+        search_depth: 5,
         cache: FxHashMap::default(),
     };
     let b = Board::default();
@@ -149,7 +151,7 @@ fn play(
 
 fn random(set_string: WriteSignal<String>) {
     let mut s = String::new();
-    for _ in 0..398 {
+    for _ in 0..BOT_STRING_LENGTH {
         let mut c = 0;
         while !(33..=126).contains(&c) {
             c = rand::random::<u8>();
@@ -175,7 +177,7 @@ fn App() -> impl IntoView {
 
         <div class="top-bar">
             <label for="stringrep">String representation / id</label>
-            <input id="string_rep" maxlength="398" bind:value=(string,set_string) class:good=move||string.read().len() == 398/>
+            <input id="string_rep" maxlength=move||BOT_STRING_LENGTH  bind:value=(string,set_string) class:good=move||string.read().len() == BOT_STRING_LENGTH/>
             <button on:click= move|_| check_and_update(string.get(), set_board, board, set_white_player, white_player, black_player) >play</button>
             <button on:click= move|_| random(set_string)>randomize</button>
         </div>
@@ -266,7 +268,7 @@ fn App() -> impl IntoView {
 
         <div>
         <h1>Chlang</h1>
-        Hi there! This is the chlang web interface. Here you can play chess localy against a friend or insert a string representation of a bot ( the id ) and submit it at the top of the screen. The id must be precisely 398 chars long and can only contain <a href="https://www.ibm.com/docs/en/sdse/6.4.0?topic=configuration-ascii-characters-from-33-126"> ascii-printable chars</a>. This means there are 94^398 different possible bots. That is a lot of bots :O!!!!
+        Hi there! This is the chlang web interface. Here you can play chess localy against a friend or insert a string representation of a bot ( the id ) and submit it at the top of the screen. The id must be precisely 404 chars long and can only contain <a href="https://www.ibm.com/docs/en/sdse/6.4.0?topic=configuration-ascii-characters-from-33-126"> ascii-printable chars</a>. This means there are 94^404 different possible bots. That is a lot of bots :O!!!!
         </div>
         }
     };
