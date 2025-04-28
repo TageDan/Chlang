@@ -29,7 +29,7 @@ fn check_and_update(
     logging::log!("{:?}", bot);
     let bot = Bot {
         evaluator: Box::new(bot),
-        search_depth: 5,
+        search_depth: 3,
         cache: FxHashMap::default(),
     };
     let b = Board::default();

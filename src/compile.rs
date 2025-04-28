@@ -23,12 +23,14 @@ enum Stage {
     Base,
     Position,
     Attack,
+    Moves,
 }
 
 struct PieceValues {
     base: u8,
     position: Vec<u8>,
     attack: u8,
+    moves: u8,
 }
 
 struct Parsed {
@@ -54,31 +56,37 @@ pub fn compile(source: String) -> String {
             base: 0,
             position: Vec::with_capacity(64),
             attack: 0,
+            moves: 0,
         },
         knight: PieceValues {
             base: 0,
             position: Vec::with_capacity(64),
             attack: 0,
+            moves: 0,
         },
         bishop: PieceValues {
             base: 0,
             position: Vec::with_capacity(64),
             attack: 0,
+            moves: 0,
         },
         rook: PieceValues {
             base: 0,
             position: Vec::with_capacity(64),
             attack: 0,
+            moves: 0,
         },
         queen: PieceValues {
             base: 0,
             position: Vec::with_capacity(64),
             attack: 0,
+            moves: 0,
         },
         king: PieceValues {
             base: 0,
             position: Vec::with_capacity(64),
             attack: 0,
+            moves: 0,
         },
     };
     for line in source.lines() {
@@ -147,6 +155,13 @@ pub fn compile(source: String) -> String {
                     continue;
                 }
             },
+            "moves:" => match parsed.state.state_type {
+                StateType::Extra => todo!(),
+                _ => {
+                    parsed.state.stage_piece = Stage::Moves;
+                    continue;
+                }
+            },
             _ => (),
         }
 
@@ -163,31 +178,37 @@ pub fn compile(source: String) -> String {
                 StateType::Pawn => match parsed.state.stage_piece {
                     Stage::Base => parsed.pawn.base = val,
                     Stage::Attack => parsed.pawn.attack = val,
+                    Stage::Moves => parsed.pawn.moves = val,
                     Stage::Position => todo!(),
                 },
                 StateType::Knight => match parsed.state.stage_piece {
                     Stage::Base => parsed.knight.base = val,
                     Stage::Attack => parsed.knight.attack = val,
+                    Stage::Moves => parsed.knight.moves = val,
                     Stage::Position => todo!(),
                 },
                 StateType::Bishop => match parsed.state.stage_piece {
                     Stage::Base => parsed.bishop.base = val,
                     Stage::Attack => parsed.bishop.attack = val,
+                    Stage::Moves => parsed.bishop.moves = val,
                     Stage::Position => todo!(),
                 },
                 StateType::Rook => match parsed.state.stage_piece {
                     Stage::Base => parsed.rook.base = val,
                     Stage::Attack => parsed.rook.attack = val,
+                    Stage::Moves => parsed.rook.moves = val,
                     Stage::Position => todo!(),
                 },
                 StateType::Queen => match parsed.state.stage_piece {
                     Stage::Base => parsed.queen.base = val,
                     Stage::Attack => parsed.queen.attack = val,
+                    Stage::Moves => parsed.queen.moves = val,
                     Stage::Position => todo!(),
                 },
                 StateType::King => match parsed.state.stage_piece {
                     Stage::Base => parsed.king.base = val,
                     Stage::Attack => parsed.king.attack = val,
+                    Stage::Moves => parsed.king.moves = val,
                     Stage::Position => todo!(),
                 },
             }
@@ -203,12 +224,11 @@ pub fn compile(source: String) -> String {
         let nums = new_trimmed.split(" ");
         for snum in nums {
             let num_inter = snum.parse::<u8>();
-            let mut num = 0;
-            if num_inter.is_ok() {
-                num = num_inter.unwrap();
+            let num = if num_inter.is_ok() {
+                num_inter.unwrap()
             } else {
                 panic!("{}", snum);
-            }
+            };
 
             match parsed.state.stage_piece {
                 Stage::Position => (),
@@ -268,11 +288,18 @@ pub fn compile(source: String) -> String {
     bytes.push(parsed.king.attack);
     bytes.push(parsed.extra[0]);
     bytes.push(parsed.extra[1]);
+    bytes.push(parsed.pawn.moves);
+    bytes.push(parsed.knight.moves);
+    bytes.push(parsed.bishop.moves);
+    bytes.push(parsed.rook.moves);
+    bytes.push(parsed.queen.moves);
+    bytes.push(parsed.king.moves);
 
     bytes.iter().map(|x| (x + 33) as char).collect::<String>()
 }
 
 fn decompile(str: &str) {
+    todo!();
     let mut result = String::new();
     let mut bytes = str.bytes().map(|x| x - 33).collect::<Vec<u8>>();
 

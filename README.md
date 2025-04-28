@@ -75,6 +75,8 @@ Pawn:
     0 0 0 0 0 0 0 0
   Attack:
     10
+  Moves:
+    3
 
 Knight:
   Base:
