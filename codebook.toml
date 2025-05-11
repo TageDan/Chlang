@@ -1,12 +1,39 @@
-dictionaries = []
 words = [
+    "amsmath",
+    "amssymb",
+    "arabic",
+    "ascii",
     "chlang",
+    "documentclass",
+    "endgraf",
+    "fancyfoot",
+    "fancyhdr",
+    "fancyhf",
+    "fancypagestyle",
     "flamegraph",
+    "footrulewidth",
+    "gobble",
+    "graphicx",
+    "headrulewidth",
+    "hspace",
+    "includegraphics",
     "leptos",
+    "listings",
+    "maketitle",
+    "pagenumbering",
+    "pagestyle",
+    "paper",
+    "renewcommand",
+    "schackbottar",
+    "selectlanguage",
+    "setlocalecaption",
+    "tableofcontents",
+    "tabularray",
     "tage",
+    "thepage",
+    "thispagestyle",
+    "usepackage",
     "wsl",
 ]
-flag_words = []
-ignore_paths = []
-ignore_patterns = []
-use_global = true
+ignore_patterns = ['\[a-z|A']
+use_global=true
